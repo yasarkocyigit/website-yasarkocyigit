@@ -1,0 +1,29 @@
+---
+title: "Databricks SQL vs Serverless SQL: Reading the Cost-Performance Curve"
+date: 2024-09-22
+index: 7
+summary: "How I evaluate the breakpoints between Databricks SQL warehouses and the Serverless tier when teams scale analytics workloads."
+tags:
+  - Databricks SQL
+  - Cost Management
+  - Performance
+draft: false
+---
+
+Databricks offers two main personas for interactive analytics: classic SQL warehouses and the newer Serverless flavor. Picking one without a decision framework leads to sticker shock or frustrated analysts. I map decisions to three axes: latency expectations, concurrency, and governance overhead.
+
+## Start with the workload envelope
+
+When teams need predictable sub-second dash refreshes during trading hours, Serverless wins because capacity is managed by Databricks and cold starts are minimal. For nightly finance refreshes or batch-heavy workloads, classic SQL warehouses allow finer control over cluster size, auto-stop rules, and spot usage. I model expected query load by daypart to understand where the base utilization sits.
+
+## Evaluate concurrency against budget
+
+Serverless abstracts cluster management but charges per request. High concurrency teams that run many short queries can overspend quickly unless caching is tuned and dashboards consolidated. In those cases I prefer larger, classic warehouses with predictable DBU burn rates. When concurrency is bursty and driven by ad-hoc notebooks, Serverless shines because it auto-scales without needing on-call intervention.
+
+## Factor in governance integrations
+
+Unity Catalog, row-level security, and audit logging behave similarly across both options, but partner ecosystems can differ. If BI tooling needs JDBC/ODBC connectivity with pushdown filters, the managed endpoints of Serverless remove a lot of configuration. When teams embed SQL in orchestration systems or want granular Terraform control, classic warehouses give more knobs.
+
+## Model the blended cost
+
+Instead of comparing list prices, I build blended charts showing base load, auto-scaling, and idle time. For some clients the answer is both: Serverless for experimentation sandboxes and critical dashboards, classic warehouses for predictable reporting. The decision gets revisited quarterly as usage data rolls in.

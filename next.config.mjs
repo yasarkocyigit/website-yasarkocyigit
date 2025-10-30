@@ -1,4 +1,16 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {};
+import { withContentlayer } from "next-contentlayer";
 
-export default nextConfig;
+const config = {
+  reactStrictMode: true,
+  experimental: {
+    typedRoutes: true,
+  },
+  images: {
+    unoptimized: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+};
+
+export default withContentlayer(config);

@@ -1,0 +1,29 @@
+---
+title: "Metadata-Driven Ingestion: Control Tables as the Map"
+date: 2024-07-05
+index: 6
+summary: "A control-table-first approach to orchestrating ingestion so pipelines stay observable and adaptable."
+tags:
+  - Metadata
+  - Orchestration
+  - Azure
+draft: false
+---
+
+Ingestion projects fail when pipelines encode logic in code instead of data. A metadata-driven approach lets teams add sources, adjust schedules, and enforce policies without redeploying notebooks. Azure Data Factory, Databricks Jobs, and Delta Live Tables all play nicely when the control plane is a simple Delta table.
+
+## Define the ingestion contract
+
+Each row in the control table represents a source-to-target flow: connection string, file pattern, expected cadence, schema hash, and owner. Pipelines read the table to know what to ingest. When a business unit wants a new dataset, we add a row with the right parameters and the orchestration layer handles the rest.
+
+## Validate schema drift automatically
+
+Before landing data, I compare the incoming schema to the stored hash. If columns shift, the pipeline routes the payload to a quarantine path and raises an alert. Teams can triage without halting other feeds. Once validated, we update the hash and keep processing.
+
+## Separate compute from orchestration
+
+Metadata-driven pipelines separate concerns cleanly. Azure Data Factory triggers parameterized Databricks notebooks. Those notebooks look up source configurations, run ingestion, and write audit records back to the control table. Because everything is data-driven, we can reroute workloads from interactive clusters to automated jobs by just toggling flags.
+
+## Close the loop with observability
+
+Every execution appends a status record: row counts, duration, latest watermark, and validation notes. Power BI dashboards built on top of the control table give leaders a live map of ingestion health. When something fails, we have the parameters and run IDs to recover quickly without asking engineers to re-run code locally.

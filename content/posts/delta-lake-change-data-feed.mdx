@@ -1,0 +1,33 @@
+---
+title: "Delta Lake Change Data Feed: Patterns for Incremental Trust"
+date: 2024-12-11
+index: 8
+summary: "Change Data Feed gives Delta pipelines a native CDC backbone. These are the guardrails and jobs I rely on for predictable increments."
+tags:
+  - Delta Lake
+  - Change Data Feed
+  - Ingestion
+draft: false
+---
+
+Change Data Feed (CDF) turns Delta tables into a narrative of every insert, update, and deletion. It is the linchpin for incremental pipelines that reconcile faster than full reloads, while keeping auditors satisfied. The key is treating CDF as a contract with producers and downstream consumers.
+
+## Declare the envelope and stick to it
+
+Producers must understand what changes they are allowed to make. I require source systems to send envelope columns (`_change_type`, `_commit_version`, `_commit_timestamp`) and a stable primary key. During onboarding, we stage the raw feed, validate against expectations, and only then promote to the curated schema with CDF enabled.
+
+## Build idempotent consumers
+
+Incremental notebooks or jobs consume CDF batches by commit range. Each run records the latest commit version processed so reruns are idempotent. When a job replays the same window, it replaces downstream records using merge statements keyed by the natural primary key. This keeps facts accurate even when upstream systems resend events.
+
+## Promote through control tables
+
+Every ingestion pipeline writes to a control table summarizing processed commits, row counts, and anomalies. Observability dashboards read from this table, so platform operators can prove a table is current without diving into logs. If counts drift beyond thresholds, the control table flags the table for review and triggers a notification.
+
+## Handle deletions explicitly
+
+CDF supplies delete records, but analytical models often forget to propagate them. I maintain a lightweight `deleted_keys` table per domain. Downstream transformations reference it to purge fact tables or adjust rollups. That practice keeps dashboards from resurrecting churned customers because a slow pipeline skipped a delete event.
+
+## Cap retention with governance in mind
+
+Regulations and storage bills require practical retention windows. I keep CDF history long enough to replay a month of change, then archive snapshots to cheaper storage. The retention settings live in the same Terraform modules that create the tables so drift between environments is impossible.
