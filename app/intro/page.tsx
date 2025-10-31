@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import { usePageTransition } from "@/components/PageTransition";
 import TypingLines from "@/components/intro/TypingLines";
 import EnterButton from "@/components/intro/EnterButton";
 import { inter, plexMono } from "../fonts";
@@ -15,11 +17,10 @@ const lines = [
 
 export default function IntroPage() {
   const router = useRouter();
-  const [isVisible, setIsVisible] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
-  const exitTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const transitionLinkRef = useRef<HTMLAnchorElement | null>(null);
+  const { setTheme } = useTheme();
+  const { navigate } = usePageTransition();
 
+  // Prefetch home page
   useEffect(() => {
     try {
       router.prefetch("/home");
@@ -28,39 +29,26 @@ export default function IntroPage() {
     }
   }, [router]);
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setIsVisible(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
+  // Force dark theme on intro page
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.add("intro-dark");
+
+    // Force dark theme
+    setTheme("dark");
+    root.classList.add("intro-dark", "dark");
+
     return () => {
       root.classList.remove("intro-dark");
     };
-  }, []);
+  }, [setTheme]);
 
   const handleActivate = useCallback(() => {
-    if (isExiting) return;
-    setIsExiting(true);
-    exitTimeout.current = setTimeout(() => {
-      if (transitionLinkRef.current) {
-        transitionLinkRef.current.click();
-      } else {
-        router.push("/home");
-      }
-    }, 150);
-  }, [isExiting, router]);
+    // Use PageTransition context to navigate with animation
+    // This ensures the transition animation plays BEFORE navigation
+    navigate("/home");
+  }, [navigate]);
 
-  useEffect(() => {
-    return () => {
-      if (exitTimeout.current) {
-        clearTimeout(exitTimeout.current);
-      }
-    };
-  }, []);
-
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -82,13 +70,9 @@ export default function IntroPage() {
     return () => window.removeEventListener("keydown", handleKeydown);
   }, [handleActivate]);
 
-  const fadeClass = `intro-fade ${
-    isVisible && !isExiting ? "intro-fade-in" : ""
-  } ${isExiting ? "intro-fade-out" : ""}`.trim();
-
   return (
     <main
-      className={`${inter.variable} ${plexMono.variable} ${fadeClass} relative min-h-screen w-full overflow-hidden bg-background text-foreground`}
+      className={`${inter.variable} ${plexMono.variable} relative min-h-screen w-full overflow-hidden bg-background text-foreground`}
       style={{ minHeight: "100dvh" }}
     >
       <video
@@ -124,10 +108,7 @@ export default function IntroPage() {
         </div>
       </div>
 
-      <EnterButton onActivate={handleActivate} disabled={isExiting} />
-      <a ref={transitionLinkRef} href="/home" tabIndex={-1} aria-hidden="true" hidden>
-        Home
-      </a>
+      <EnterButton onActivate={handleActivate} />
     </main>
   );
 }

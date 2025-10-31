@@ -26,7 +26,7 @@ export default function Ticker() {
   return (
     <div
       suppressHydrationWarning
-      className="mono tracking-[0.32em] text-[0.6rem] text-muted"
+      className="mono text-[0.55rem] tracking-[0.18em] text-muted sm:text-[0.6rem] sm:tracking-[0.32em]"
     >
       {value ?? ""}
     </div>

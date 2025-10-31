@@ -1,12 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, createContext, useContext } from "react";
 import type { ReactNode } from "react";
 import type { Route } from "next";
 import { usePathname, useRouter } from "next/navigation";
 import { gsap } from "gsap";
 
 const BLOCK_COUNT = 20;
+
+interface PageTransitionContextValue {
+  navigate: (href: string) => void;
+}
+
+const PageTransitionContext = createContext<PageTransitionContextValue | null>(null);
+
+export function usePageTransition() {
+  const context = useContext(PageTransitionContext);
+  if (!context) {
+    throw new Error("usePageTransition must be used within PageTransition");
+  }
+  return context;
+}
 
 export default function PageTransition({
   children,
@@ -16,24 +30,11 @@ export default function PageTransition({
   const router = useRouter();
   const pathname = usePathname();
   const overlayRef = useRef<HTMLDivElement | null>(null);
-  const signatureOverlayRef = useRef<HTMLDivElement | null>(null);
-  const signatureTextRef = useRef<HTMLSpanElement | null>(null);
   const blocksRef = useRef<HTMLDivElement[]>([]);
   const isTransitioning = useRef(false);
-  const revealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasMountedRef = useRef(false);
-
-  const resetSignature = useCallback(() => {
-    const text = signatureTextRef.current;
-    if (!text) return;
-    gsap.set(text, { opacity: 0, y: 28 });
-  }, []);
+  const lastRevealedPathRef = useRef(pathname);
 
   const revealPage = useCallback(() => {
-    if (revealTimeoutRef.current) {
-      clearTimeout(revealTimeoutRef.current);
-    }
-
     if (blocksRef.current.length === 0) return;
 
     const rootStyles = getComputedStyle(document.documentElement);
@@ -42,7 +43,9 @@ export default function PageTransition({
       overlayRef.current.style.background = bgValue;
     }
 
-    resetSignature();
+    if (process.env.NODE_ENV === "development") {
+      console.log("[PageTransition] reveal start");
+    }
 
     gsap.set(blocksRef.current, { scaleX: 1, transformOrigin: "right" });
 
@@ -58,101 +61,70 @@ export default function PageTransition({
           overlayRef.current.style.pointerEvents = "none";
           overlayRef.current.style.background = "transparent";
         }
-        if (signatureOverlayRef.current) {
-          signatureOverlayRef.current.style.pointerEvents = "none";
+        if (process.env.NODE_ENV === "development") {
+          console.log("[PageTransition] reveal complete");
         }
       },
     });
-
-    revealTimeoutRef.current = setTimeout(() => {
-      const first = blocksRef.current[0];
-      if (first && (gsap.getProperty(first, "scaleX") as number) > 0.01) {
-        gsap.to(blocksRef.current, {
-          scaleX: 0,
-          duration: 0.2,
-          ease: "power2.out",
-          transformOrigin: "right",
-          onComplete: () => {
-            isTransitioning.current = false;
-            if (overlayRef.current) {
-              overlayRef.current.style.pointerEvents = "none";
-              overlayRef.current.style.background = "transparent";
-            }
-            if (signatureOverlayRef.current) {
-              signatureOverlayRef.current.style.pointerEvents = "none";
-            }
-          },
-        });
-      }
-    }, 900);
-  }, [resetSignature]);
+  }, []);
 
   const coverPage = useCallback(
     (pushHref: string) => {
-      if (!overlayRef.current || !signatureOverlayRef.current) return;
+      if (!overlayRef.current) return;
 
       overlayRef.current.style.pointerEvents = "auto";
-      signatureOverlayRef.current.style.pointerEvents = "auto";
 
       const rootStyles = getComputedStyle(document.documentElement);
       const bgValue = rootStyles.getPropertyValue("--bg").trim() || "transparent";
       overlayRef.current.style.background = bgValue;
 
-      resetSignature();
-
-      const timeline = gsap.timeline({
-        defaults: { ease: "power2.out" },
-        onComplete: () => {
-          router.push(pushHref as Route);
-        },
-      });
-
-      timeline
-        .to(blocksRef.current, {
-          scaleX: 1,
-          duration: 0.45,
-          stagger: 0.024,
-          transformOrigin: "left",
-        })
-        .set(signatureOverlayRef.current, { opacity: 1 }, "-=0.18");
-
-      const textElement = signatureTextRef.current;
-      if (textElement) {
-        timeline
-          .fromTo(
-            textElement,
-            { opacity: 0, y: 28 },
-            { opacity: 1, y: 0, duration: 0.65, ease: "power2.out" },
-            "-=0.18"
-          )
-          .to(textElement, {
-            opacity: 1,
-            duration: 0.75,
-            ease: "power1.inOut",
-          })
-          .to(textElement, {
-            opacity: 0,
-            y: -18,
-            duration: 0.55,
-            ease: "power2.in",
-          });
+      if (process.env.NODE_ENV === "development") {
+        console.log("[PageTransition] cover start", pushHref);
       }
 
-      timeline.to(signatureOverlayRef.current, {
-        opacity: 0,
-        duration: 0.28,
+      // Close transition only
+      gsap.to(blocksRef.current, {
+        scaleX: 1,
+        duration: 0.45,
+        stagger: 0.024,
+        transformOrigin: "left",
+        ease: "power2.out",
+        onComplete: () => {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[PageTransition] cover complete, pushing", pushHref);
+          }
+          // Navigate when screen is fully covered
+          router.push(pushHref as Route);
+          // Open transition will happen automatically via revealPage on pathname change
+          // isTransitioning will be reset in revealPage's onComplete
+        },
       });
     },
-    [resetSignature, router]
+    [router]
   );
 
   const handleRouteChange = useCallback(
     (pushHref: string) => {
       if (isTransitioning.current) return;
       isTransitioning.current = true;
+      if (process.env.NODE_ENV === "development") {
+        console.log("[PageTransition] handleRouteChange ->", pushHref);
+      }
       coverPage(pushHref);
     },
     [coverPage]
+  );
+
+  // Public API for programmatic navigation with transition
+  const navigate = useCallback(
+    (href: string) => {
+      if (isTransitioning.current) return;
+      if (process.env.NODE_ENV === "development") {
+        console.log("[PageTransition] navigate ->", href);
+      }
+      handleRouteChange(href);
+    },
+    [handleRouteChange]
   );
 
   const handleAnchorClick = useCallback(
@@ -183,6 +155,9 @@ export default function PageTransition({
       event.stopPropagation();
 
       anchor.blur();
+      if (process.env.NODE_ENV === "development") {
+        console.log("[PageTransition] anchor click ->", pushHref);
+      }
       handleRouteChange(pushHref);
     },
     [handleRouteChange, pathname]
@@ -200,14 +175,9 @@ export default function PageTransition({
       }
     }
 
+    // Set initial state without animation
     gsap.set(blocksRef.current, { scaleX: 0, transformOrigin: "left" });
-    resetSignature();
-
-    requestAnimationFrame(() => {
-      revealPage();
-      hasMountedRef.current = true;
-    });
-  }, [resetSignature, revealPage]);
+  }, []);
 
   useEffect(() => {
     const anchors = Array.from(
@@ -227,19 +197,24 @@ export default function PageTransition({
   }, [handleAnchorClick, pathname]);
 
   useEffect(() => {
-    if (!hasMountedRef.current) return;
+    if (lastRevealedPathRef.current === pathname) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[PageTransition] skip reveal", pathname);
+      }
+      return;
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[PageTransition] trigger reveal", pathname);
+    }
+    lastRevealedPathRef.current = pathname;
     revealPage();
   }, [pathname, revealPage]);
 
   return (
-    <>
+    <PageTransitionContext.Provider value={{ navigate }}>
       <div ref={overlayRef} className="transition-overlay" />
-      <div ref={signatureOverlayRef} className="transition-logo">
-        <span ref={signatureTextRef} className="transition-signature">
-          YASAR KOCYIGIT
-        </span>
-      </div>
       {children}
-    </>
+    </PageTransitionContext.Provider>
   );
 }

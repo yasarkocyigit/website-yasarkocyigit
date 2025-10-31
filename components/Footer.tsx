@@ -30,8 +30,8 @@ const LINKS = [
 export default function Footer() {
   return (
     <footer className="border-t border-dashed border-line bg-background/80">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12 text-sm text-muted md:flex-row md:items-center md:justify-between">
-        <p className="mono tracking-[0.25em] text-xs text-muted">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-10 text-sm text-muted sm:px-6 md:flex-row md:items-center md:justify-between">
+        <p className="mono tracking-[0.22em] text-[0.6rem] text-muted sm:text-xs sm:tracking-[0.25em]">
           © Yasar Kocyigit {YEAR}.
         </p>
         <div className="flex items-center gap-3">
@@ -42,7 +42,7 @@ export default function Footer() {
               target="_blank"
               rel="noreferrer"
               aria-label={label}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-line bg-card transition hover:-translate-y-0.5 hover:shadow-lift"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-line bg-card transition hover:-translate-y-0.5 hover:shadow-lift sm:h-12 sm:w-12"
             >
               <Icon className="h-5 w-5" aria-hidden="true" />
             </a>

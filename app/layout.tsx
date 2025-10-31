@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
 import "@/styles/portrait.css";
-import { inter, plexMono } from "./fonts";
+import { inter, plexMono, dancingScript } from "./fonts";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import PageTransition from "@/components/PageTransition";
 import type { ReactNode } from "react";
@@ -76,7 +76,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${plexMono.variable}`}
+      className={`${inter.variable} ${plexMono.variable} ${dancingScript.variable}`}
       suppressHydrationWarning
     >
       <body className="bg-background text-foreground antialiased">
