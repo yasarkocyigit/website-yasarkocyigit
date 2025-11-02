@@ -1,0 +1,136 @@
+.root {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.hero,
+.about,
+.services,
+.outro {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  padding: clamp(1.75rem, 4vw, 3rem);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.hero {
+  padding-top: calc(clamp(1.75rem, 4vw, 3rem) + var(--nav-height) + env(safe-area-inset-top, 0px));
+}
+
+.heroImg {
+  width: clamp(220px, 26vw, 340px);
+  aspect-ratio: 5 / 7;
+}
+
+.heroImg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  box-shadow: 0 40px 65px -48px rgba(15, 23, 42, 0.55);
+}
+
+.outroImg {
+  width: clamp(200px, 28vw, 360px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.outroImg img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.about {
+  text-align: center;
+}
+
+.services {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.servicesHeader {
+  position: relative;
+  width: 100%;
+  padding: 0 clamp(1.5rem, 4vw, 3rem);
+  will-change: transform;
+}
+
+.servicesHeader img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.servicesHeader:nth-child(1),
+.servicesHeader:nth-child(3) {
+  transform: translateX(100%) translateY(0);
+}
+
+.servicesHeader:nth-child(2) {
+  transform: translateX(-100%) translateY(0);
+  z-index: 2;
+}
+
+.servicesCopy {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin-top: 155svh;
+  padding: clamp(1.75rem, 4vw, 3rem) clamp(1.75rem, 5vw, 3.5rem) clamp(8rem, 18vw, 24rem);
+  text-align: center;
+}
+
+.animateText {
+  position: relative;
+  width: min(900px, 60%);
+  margin: 0 auto;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  line-height: 1.08;
+  --clip-value: 100%;
+}
+
+.animateText::before {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--fg);
+  clip-path: inset(0 0 var(--clip-value) 0);
+  will-change: clip-path;
+}
+
+@media (max-width: 1000px) {
+  .animateText {
+    width: 100%;
+    font-size: clamp(1.65rem, 6vw, 2.4rem);
+  }
+
+  .heroImg {
+    width: clamp(200px, 55vw, 260px);
+  }
+
+  .outroImg {
+    width: clamp(180px, 50vw, 260px);
+  }
+
+  .servicesCopy {
+    margin-top: 120svh;
+    padding-bottom: clamp(10rem, 28vw, 18rem);
+  }
+}

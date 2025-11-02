@@ -50,10 +50,10 @@ export default function Example() {
 ```
 
 Props:
-- `src`, `alt` — required image source/alt text.
-- `focalX`, `focalY` — adjust object position (CSS values, default `50%` and `35%`).
-- `intensity` — vignette strength (`soft` | `medium` | `hard`).
-- `showNoise` — enable subtle film grain overlay.
+- `src`, `alt` - required image source/alt text.
+- `focalX`, `focalY` - adjust object position (CSS values, default `50%` and `35%`).
+- `intensity` - vignette strength (`soft` | `medium` | `hard`).
+- `showNoise` - enable subtle film grain overlay.
 
 ## Content Workflow
 - Add new posts with `pnpm new:post "Your Title"`. The script generates the next index automatically.

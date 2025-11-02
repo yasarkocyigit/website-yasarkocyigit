@@ -532,3 +532,20 @@ hr {
     stroke-width: 2.5;
   }
 }
+.prose pre,
+.prose code,
+.prose kbd,
+.prose samp {
+  background-color: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  border-radius: 0.5rem;
+  padding: 0.15em 0.35em;
+}
+
+.dark .prose pre,
+.dark .prose code,
+.dark .prose kbd,
+.dark .prose samp {
+  background-color: rgba(148, 163, 184, 0.18);
+  color: rgba(226, 232, 240, 0.92);
+}

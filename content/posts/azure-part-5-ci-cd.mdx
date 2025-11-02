@@ -1,0 +1,580 @@
+---
+title: "Building a Production-Ready Data Pipeline with Azure (Part 5): Implementing CI/CD"
+date: 2025-06-30
+index: 7
+summary: "Implement Azure Data Factory and Databricks CI/CD with Git integration, DevOps pipelines, and automated environment promotion."
+tags:
+  - Azure DevOps
+  - CI/CD
+  - Databricks
+  - Azure Data Factory
+draft: false
+---
+## Building a Production Ready Data Pipeline with Azure Part 5: Implementing CI/CD for Azure Data Factory
+
+## Introduction
+
+Welcome to Part 5 of my comprehensive series on building production-ready data pipelines with Azure. In this journey, I’ve covered the essential components of a modern data platform:
+
+- [**Part 1](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd)**: I established the foundation with Medallion Architecture, setting up Azure Data Lake Storage Gen2, implementing the bronze, silver, and gold layers, and creating the basic infrastructure for our data platform.
+- [**Part 2](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-2-unity-catalog-integration-689b52cb71b2)**: I integrated Unity Catalog for comprehensive data governance, implementing fine-grained access controls, data lineage tracking, and centralized metadata management across our data estate.
+- [**Part 3](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-3-advanced-unity-catalog-table-d456edbd7f47)**: I dove deep into advanced Unity Catalog features, exploring managed and external tables, implementing data quality constraints, and setting up cross-workspace data sharing capabilities.
+- [**Part 4](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-4-from-mount-points-to-unity-catalog-696f8dd634a1)**: I demonstrated the migration from traditional mount points to Unity Catalog volumes, modernizing our data access patterns and improving security while maintaining backward compatibility.
+
+Now, in Part 5, I’ll tackle one of the most critical aspects of any production system: **Continuous Integration and Continuous Deployment (CI/CD)**. I’ll start by implementing CI/CD for Azure Data Factory (ADF), which serves as the orchestration layer for our data pipelines. In future posts, I’ll extend this to include Databricks notebook deployments.
+
+## Why Start with Azure Data Factory CI/CD?
+
+Azure Data Factory is the backbone of our data orchestration, managing:
+
+- Pipeline scheduling and dependencies
+- Data movement between systems
+- Trigger management for automated workflows
+- Integration with Databricks for data transformations
+
+Implementing CI/CD for ADF first ensures that our orchestration layer is robust and version-controlled before we add the complexity of notebook deployments.
+
+## Understanding the ADF CI/CD Architecture
+
+The CI/CD process for Azure Data Factory follows a specific flow:
+
+![](https://miro.medium.com/v2/resize:fit:1400/1*kDU3bLFj4US2P5KaUvFYqg.png)
+
+1. **Development ADF**: Where developers make changes directly in the portal
+2. **adf_publish branch**: Automatically generated branch containing ARM templates
+3. **Production ADF**: Target environment updated via CI/CD pipeline
+
+## Setting Up the Azure DevOps Pipeline
+
+Let me walk through the complete pipeline configuration that I’ve tested and implemented:
+
+## 1. Pipeline Structure
+
+```sql
+# azure-pipelines.yml
+trigger: none  # Manual trigger only
+pr: none       # No PR triggers
+```
+
+```
+pool:
+  vmImage: 'windows-latest'
+```
+
+```
+variables:
+  azureServiceConnection: 'Azure-ADF-Connection'
+  resourceGroupName: 'your-prod-rg'
+```
+
+```
+stages:
+# TEST DEPLOYMENT
+- stage: DeployTest
+  displayName: 'Deploy to Test ADF'
+  variables:
+  - group: ADF-Common
+  - group: ADF-Test
+  jobs:
+  - job: DeployToTest
+    displayName: 'Deploy to Test Environment'
+    steps:
+    # Implementation details below
+```
+
+```
+# PRODUCTION DEPLOYMENT  
+- stage: DeployProd
+  displayName: 'Deploy to Production ADF'
+  dependsOn: DeployTest
+  condition: succeeded()
+  variables:
+  - group: ADF-Common
+  - group: ADF-Production
+  jobs:
+  - deployment: DeployToProd
+    displayName: 'Deploy to Production Environment'
+    environment: 'Production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Implementation details below
+```
+
+## 2. Variable Groups Configuration
+
+First, I set up variable groups in Azure DevOps to manage environment-specific configurations:
+
+**ADF-Common** (Shared variables):
+
+```vbnet
+AZURE_SUBSCRIPTION_ID: "your-subscription-id"
+```
+
+**ADF-Test** (Test environment):
+
+```vbnet
+ADF_NAME: "adf-test-instance"
+RESOURCE_GROUP: "rg-test"
+```
+
+**ADF-Production** (Production environment):
+
+```vbnet
+ADF_NAME: "adf-prod-instance"
+RESOURCE_GROUP: "rg-prod"
+```
+
+## Implementing the Deployment Steps
+
+## 1. Retrieving ARM Templates from adf_publish Branch
+
+The first critical step is retrieving the ARM templates that ADF automatically generates:
+
+```bash
+- task: PowerShell@2
+  displayName: 'Get ARM Templates from adf_publish branch'
+  inputs:
+    targetType: 'inline'
+    script: |
+      # Clone the repository
+      git clone https://$(System.AccessToken)@dev.azure.com/YourOrg/YourProject/_git/YourRepo temp_repo
+      
+      # Navigate to repo
+      cd temp_repo
+      
+      # Checkout adf_publish branch
+      git checkout adf_publish
+      
+      # Copy ARM templates to working directory
+      # Note: Templates are in a folder named after your dev ADF instance
+      Copy-Item "adf-dev-instance/ARMTemplateForFactory.json" -Destination "$(System.DefaultWorkingDirectory)" -Force
+      Copy-Item "adf-dev-instance/ARMTemplateParametersForFactory.json" -Destination "$(System.DefaultWorkingDirectory)" -Force
+      
+      # Copy linked templates if they exist
+      if (Test-Path "adf-dev-instance/linkedTemplates") {
+        Copy-Item "adf-dev-instance/linkedTemplates" -Destination "$(System.DefaultWorkingDirectory)" -Recurse -Force
+      }
+      
+      # Copy global parameters if they exist
+      if (Test-Path "adf-dev-instance/globalParameters") {
+        Copy-Item "adf-dev-instance/globalParameters" -Destination "$(System.DefaultWorkingDirectory)" -Recurse -Force
+      }
+      
+      # Return to parent directory
+      cd ..
+      
+      # List files for verification
+      Write-Host "Files copied to working directory:"
+      Get-ChildItem -Path "$(System.DefaultWorkingDirectory)" | Format-Table Name, Length
+```
+
+## 2. Stopping Active Triggers
+
+Before deployment, I must stop all active triggers to prevent conflicts:
+
+```perl
+- task: AzurePowerShell@5
+  displayName: 'Stop Triggers - Test'
+  inputs:
+    azureSubscription: $(azureServiceConnection)
+    ScriptType: 'InlineScript'
+    Inline: |
+      $DataFactoryName = "$(ADF_NAME)"
+      $ResourceGroupName = "$(RESOURCE_GROUP)"
+      
+      Write-Host "Checking ADF: $DataFactoryName in RG: $ResourceGroupName"
+      
+      # Verify ADF exists
+      try {
+        $adf = Get-AzDataFactoryV2 -ResourceGroupName $ResourceGroupName -Name $DataFactoryName
+        Write-Host "✓ ADF found: $($adf.DataFactoryName)"
+      } catch {
+        Write-Error "ADF not found!"
+        exit 1
+      }
+      
+      # Get and stop all active triggers
+      Write-Host "Getting triggers..."
+      $triggers = Get-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName -ErrorAction SilentlyContinue
+      
+      if ($triggers) {
+        $triggersToStop = $triggers | Where-Object { $_.RuntimeState -eq "Started" }
+        
+        if ($triggersToStop.Count -gt 0) {
+          Write-Host "Found $($triggersToStop.Count) running triggers"
+          $stoppedTriggerNames = @()
+          
+          foreach ($trigger in $triggersToStop) {
+            Write-Host "Stopping trigger: $($trigger.Name)"
+            Stop-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName -Name $trigger.Name -Force
+            $stoppedTriggerNames += $trigger.Name
+          }
+          
+          # Save stopped triggers for later restart
+          $stoppedList = $stoppedTriggerNames -join ','
+          Write-Host "##vso[task.setvariable variable=StoppedTriggers]$stoppedList"
+          Write-Host "Stopped triggers: $stoppedList"
+        } else {
+          Write-Host "No running triggers found"
+          Write-Host "##vso[task.setvariable variable=StoppedTriggers]"
+        }
+      } else {
+        Write-Host "No triggers found in ADF"
+        Write-Host "##vso[task.setvariable variable=StoppedTriggers]"
+      }
+    azurePowerShellVersion: 'LatestVersion'
+```
+
+## 3. Deploying ARM Templates
+
+The actual deployment uses Azure Resource Manager:
+
+```yaml
+- task: AzureResourceManagerTemplateDeployment@3
+  displayName: 'Deploy ARM Template to Test'
+  inputs:
+    deploymentScope: 'Resource Group'
+    azureResourceManagerConnection: $(azureServiceConnection)
+    subscriptionId: $(AZURE_SUBSCRIPTION_ID)
+    action: 'Create Or Update Resource Group'
+    resourceGroupName: $(RESOURCE_GROUP)
+    location: 'East US'
+    templateLocation: 'Linked artifact'
+    csmFile: '$(System.DefaultWorkingDirectory)/ARMTemplateForFactory.json'
+    csmParametersFile: '$(System.DefaultWorkingDirectory)/ARMTemplateParametersForFactory.json'
+    overrideParameters: '-factoryName $(ADF_NAME)'
+    deploymentMode: 'Incremental'
+```
+
+## 4. Restarting Triggers
+
+After deployment, restart the previously stopped triggers:
+
+```bash
+- task: AzurePowerShell@5
+  displayName: 'Start Triggers - Test'
+  condition: always()
+  inputs:
+    azureSubscription: $(azureServiceConnection)
+    ScriptType: 'InlineScript'
+    Inline: |
+      $DataFactoryName = "$(ADF_NAME)"
+      $ResourceGroupName = "$(RESOURCE_GROUP)"
+      
+      Write-Host "Checking for triggers to start..."
+      
+      # Get the stopped triggers from variable
+      $stoppedTriggers = "$(StoppedTriggers)"
+      
+      if ([string]::IsNullOrWhiteSpace($stoppedTriggers)) {
+        Write-Host "No triggers were stopped, nothing to start"
+        exit 0
+      }
+      
+      $triggerArray = $stoppedTriggers -split ','
+      
+      Write-Host "Starting $($triggerArray.Count) triggers..."
+      
+      foreach ($triggerName in $triggerArray) {
+        if ($triggerName) {
+          Write-Host "Starting trigger: $triggerName"
+          try {
+            Start-AzDataFactoryV2Trigger -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName -Name $triggerName -Force
+            Write-Host "✓ Started: $triggerName"
+          } catch {
+            Write-Warning "Failed to start trigger $triggerName : $_"
+          }
+        }
+      }
+    azurePowerShellVersion: 'LatestVersion'
+```
+
+## Production Deployment with Special Considerations
+
+When deploying to production, I encountered specific challenges that required additional processing:
+
+## 1. Handling Integration Runtime Conflicts
+
+Production environments often have existing Integration Runtimes that shouldn’t be overwritten:
+
+```bash
+- task: PowerShell@2
+  displayName: 'Get and Process ARM Templates for Production'
+  inputs:
+    targetType: 'inline'
+    script: |
+      # Retrieve templates (same as before)
+      git clone https://$(System.AccessToken)@dev.azure.com/YourOrg/YourProject/_git/YourRepo temp_repo
+      cd temp_repo
+      git checkout adf_publish
+      
+      # Copy templates
+      Copy-Item "adf-dev-instance/ARMTemplateForFactory.json" -Destination "$(System.DefaultWorkingDirectory)" -Force
+      Copy-Item "adf-dev-instance/ARMTemplateParametersForFactory.json" -Destination "$(System.DefaultWorkingDirectory)" -Force
+      
+      cd ..
+      
+      # Process template for Production
+      Write-Host "Processing ARM template for Production..."
+      
+      $templatePath = "$(System.DefaultWorkingDirectory)/ARMTemplateForFactory.json"
+      $template = Get-Content $templatePath -Raw | ConvertFrom-Json
+      
+      Write-Host "Original resource count: $($template.resources.Count)"
+      
+      # Remove factory resource (we're updating existing)
+      $template.resources = $template.resources | Where-Object { 
+        $_.type -ne "Microsoft.DataFactory/factories"
+      }
+      
+      # Remove ALL Integration Runtime resources
+      $template.resources = $template.resources | Where-Object {
+        $_.type -ne "Microsoft.DataFactory/factories/integrationruntimes"
+      }
+      
+      # Clean IR references from all resources
+      foreach ($resource in $template.resources) {
+        # Clean dependencies
+        if ($resource.dependsOn) {
+          if ($resource.dependsOn -is [string]) {
+            if ($resource.dependsOn -like "*integrationRuntime*") {
+              $resource.PSObject.Properties.Remove('dependsOn')
+            }
+          } else {
+            $cleanDeps = @()
+            foreach ($dep in $resource.dependsOn) {
+              if ($dep -notlike "*integrationRuntime*" -and 
+                  $dep -notlike "*/integrationRuntimes/*") {
+                $cleanDeps += $dep
+              }
+            }
+            
+            if ($cleanDeps.Count -gt 0) {
+              $resource.dependsOn = $cleanDeps
+            } else {
+              $resource.PSObject.Properties.Remove('dependsOn')
+            }
+          }
+        }
+        
+        # Remove connectVia from LinkedServices
+        if ($resource.type -eq "Microsoft.DataFactory/factories/linkedservices") {
+          if ($resource.properties.connectVia) {
+            Write-Host "Removing IR reference from LinkedService: $($resource.name)"
+            $resource.properties.PSObject.Properties.Remove('connectVia')
+          }
+        }
+      }
+      
+      Write-Host "Final resource count: $($template.resources.Count)"
+      
+      # Save processed template
+      $outputPath = "$(System.DefaultWorkingDirectory)/ARMTemplateForFactory_Prod.json"
+      $templateJson = $template | ConvertTo-Json -Depth 100 -Compress
+      [System.IO.File]::WriteAllText($outputPath, $templateJson, [System.Text.Encoding]::UTF8)
+      Write-Host "✓ Processed template saved"
+```
+
+## Setting Up Service Connections
+
+Before running the pipeline, ensure proper service connections are configured:
+
+## 1. Create Service Principal
+
+```sql
+# Create service principal for ADF deployment
+az ad sp create-for-rbac \
+  --name "ADF-CI-CD-ServicePrincipal" \
+  --role "Data Factory Contributor" \
+  --scopes "/subscriptions/{subscription-id}/resourceGroups/{resource-group}" \
+  --sdk-auth
+```
+
+## 2. Configure in Azure DevOps
+
+1. Navigate to Project Settings → Service connections
+2. Create new Azure Resource Manager connection
+3. Use Service Principal (manual)
+4. Enter the credentials from the previous step
+5. Verify and save
+
+## 3. Grant Permissions
+
+Ensure the service principal has these permissions:
+
+- **Data Factory Contributor** on both test and production resource groups
+- **Reader** access to the subscription
+- **Storage Blob Data Contributor** if accessing storage accounts
+
+## Best Practices and Lessons Learned
+
+## 1. Manual Triggers Only
+
+I use manual triggers for production deployments to maintain control:
+
+```yaml
+trigger: none  # No automatic triggers
+pr: none       # No pull request triggers
+```
+
+## 2. Environment Approvals
+
+Set up approval gates for production deployments:
+
+- In Azure DevOps → Environments → Production
+- Add approvers who must sign off before production deployment
+- Configure business hours restrictions
+
+## 3. Deployment Validation
+
+Add validation steps after deployment:
+
+```php
+- task: AzurePowerShell@5
+  displayName: 'Validate Deployment'
+  inputs:
+    azureSubscription: $(azureServiceConnection)
+    ScriptType: 'InlineScript'
+    Inline: |
+      $DataFactoryName = "$(ADF_NAME)"
+      $ResourceGroupName = "$(RESOURCE_GROUP)"
+      
+      # Check pipelines
+      $pipelines = Get-AzDataFactoryV2Pipeline -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName
+      Write-Host "Deployed $($pipelines.Count) pipelines"
+      
+      # Check datasets
+      $datasets = Get-AzDataFactoryV2Dataset -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName
+      Write-Host "Deployed $($datasets.Count) datasets"
+      
+      # Check linked services
+      $linkedServices = Get-AzDataFactoryV2LinkedService -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName
+      Write-Host "Deployed $($linkedServices.Count) linked services"
+      
+      # Verify critical components exist
+      $criticalPipelines = @("MainETLPipeline", "DailyProcessing")
+      foreach ($pipeline in $criticalPipelines) {
+        try {
+          Get-AzDataFactoryV2Pipeline -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName -Name $pipeline
+          Write-Host "✓ Critical pipeline found: $pipeline"
+        } catch {
+          Write-Error "Critical pipeline missing: $pipeline"
+          exit 1
+        }
+      }
+```
+
+## 4. Backup Before Deployment
+
+Always backup production configuration:
+
+```bash
+- task: AzurePowerShell@5
+  displayName: 'Backup Production Configuration'
+  inputs:
+    azureSubscription: $(azureServiceConnection)
+    ScriptType: 'InlineScript'
+    Inline: |
+      $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+      $backupPath = "$(Build.ArtifactStagingDirectory)/backup_$timestamp"
+      New-Item -ItemType Directory -Path $backupPath -Force
+      
+      # Export current configuration
+      $DataFactoryName = "$(ADF_NAME)"
+      $ResourceGroupName = "$(RESOURCE_GROUP)"
+      
+      # Export pipelines
+      $pipelines = Get-AzDataFactoryV2Pipeline -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName
+      $pipelines | ConvertTo-Json -Depth 100 | Out-File "$backupPath/pipelines.json"
+      
+      # Export datasets
+      $datasets = Get-AzDataFactoryV2Dataset -ResourceGroupName $ResourceGroupName -DataFactoryName $DataFactoryName
+      $datasets | ConvertTo-Json -Depth 100 | Out-File "$backupPath/datasets.json"
+      
+      Write-Host "Backup created at: $backupPath"
+```
+
+## Common Pitfalls and Solutions
+
+## 1. ARM Template Location
+
+The ARM templates are generated in a folder named after your development ADF instance, not in the root of adf_publish branch.
+
+## 2. Integration Runtime Dependencies
+
+Production environments often have different IR configurations. Always clean IR references when deploying to production.
+
+## 3. Trigger State Management
+
+Always track which triggers were stopped so you can restart only those specific triggers after deployment.
+
+## 4. Linked Services Connection Strings
+
+Use ADF parameters or Azure Key Vault references for connection strings to avoid hardcoding environment-specific values.
+
+## Monitoring Deployments
+
+Set up monitoring for your CI/CD pipeline:
+
+## 1. Pipeline Notifications
+
+Configure email notifications in Azure DevOps:
+
+```javascript
+- task: SendEmail@1
+  displayName: 'Send Deployment Notification'
+  condition: always()
+  inputs:
+    To: 'team@company.com'
+    Subject: 'ADF Deployment to $(Environment.Name) - $(Agent.JobStatus)'
+    Body: |
+      Deployment Details:
+      - Environment: $(Environment.Name)
+      - Status: $(Agent.JobStatus)
+      - Build Number: $(Build.BuildNumber)
+      - Deployed By: $(Build.RequestedFor)
+```
+
+## 2. Deployment History
+
+Track deployment history using tags:
+
+```bash
+- task: AzureCLI@2
+  displayName: 'Tag ADF with Deployment Info'
+  inputs:
+    azureSubscription: $(azureServiceConnection)
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az tag update --resource-id "/subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP)/providers/Microsoft.DataFactory/factories/$(ADF_NAME)" \
+        --tags LastDeployment=$(Build.BuildNumber) \
+               DeploymentDate=$(date +%Y-%m-%d) \
+               DeployedBy="$(Build.RequestedFor)"
+```
+
+## Conclusion
+
+In this guide, I’ve demonstrated how to implement a robust CI/CD pipeline for Azure Data Factory that ensures:
+
+1. **Controlled Deployments**: Manual triggers and approval gates prevent accidental deployments
+2. **Environment Isolation**: Separate configurations for test and production environments
+3. **Safe Deployments**: Trigger management prevents data processing conflicts
+4. **Production Protection**: Special handling for Integration Runtimes and existing resources
+5. **Traceability**: Full audit trail of what was deployed, when, and by whom
+
+This CI/CD pipeline has transformed our ADF deployment process from error-prone manual updates to a reliable, repeatable process. The pipeline handles the complexities of ARM template processing, manages environment-specific configurations, and ensures zero-downtime deployments.
+
+## What’s Next?
+
+In the next update to this post, I’ll extend this CI/CD pipeline to include:
+
+- Databricks notebook deployment integration
+
+The foundation we’ve built here will make adding these components straightforward while maintaining the same level of reliability and control.
+
+![](https://miro.medium.com/v2/resize:fit:1400/1*PglYj7ub7pXvQI0jfZwwOQ.png)
+
+*If you found this article helpful, please give it a clap and follow me for more Azure data engineering content. Feel free to connect with me on [LinkedIn](https://linkedin.com/in/kocyigityasar) for questions and discussions.*
