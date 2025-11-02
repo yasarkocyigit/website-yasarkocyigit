@@ -17,39 +17,37 @@ draft: false
 
 In today’s data-driven world, organizations are drowning in data but starving for insights. Traditional ETL processes are too rigid, too slow, and too expensive to scale. What if I told you there’s a better way to build data pipelines that are:
 
-- **Metadata-driven** (no code changes for new tables)
-- **Scalable** (handles growing data volumes automatically)
-- **Reliable** (comprehensive error handling and monitoring)
-- **Cost-effective** (optimized resource usage)
-
-Today, I’ll walk you through building a complete **Medallion Architecture** data pipeline using Azure services. By the end of this article, you’ll have a production-ready solution that can process terabytes of data with minimal maintenance.
+- Metadata-driven (no code changes for new tables)
+- Scalable (handles growing data volumes automatically)
+- Reliable (comprehensive error handling and monitoring)
+- Cost-effective (optimized resource usage) Today, I’ll walk you through building a complete Medallion Architecture data pipeline using Azure services. By the end of this article, you’ll have a production-ready solution that can process terabytes of data with minimal maintenance.
 
 ## What is Medallion Architecture?
 
-The **Medallion Architecture** is a data design pattern that organizes data in layers of increasing quality and refinement:
+The Medallion Architecture is a data design pattern that organizes data in layers of increasing quality and refinement:
 
 ## Bronze Layer (Raw Data)
 
-- **Purpose**: Exact copy of source system data
-- **Format**: Parquet files for efficient storage
-- **Characteristics**: Preserves original data types, includes duplicates
-- **Use Case**: Data archival, compliance, re-processing scenarios
+- Purpose: Exact copy of source system data
+- Format: Parquet files for efficient storage
+- Characteristics: Preserves original data types, includes duplicates
+- Use Case: Data archival, compliance, re-processing scenarios
 
 ## Silver Layer (Cleaned & Enriched)
 
-- **Purpose**: Business-ready data with quality controls
-- **Format**: Delta Lake for ACID transactions
-- **Characteristics**: Deduplicated, validated, enriched with metadata
-- **Use Case**: Analytics, reporting, machine learning
+- Purpose: Business-ready data with quality controls
+- Format: Delta Lake for ACID transactions
+- Characteristics: Deduplicated, validated, enriched with metadata
+- Use Case: Analytics, reporting, machine learning
 
 ## Gold Layer (Analytics Ready)
 
-- **Purpose**: Highly refined, aggregated data
-- **Format**: Delta Lake with business models
-- **Characteristics**: KPIs, dimensions, domain-specific views
-- **Use Case**: Executive dashboards, regulatory reporting
+- Purpose: Highly refined, aggregated data
+- Format: Delta Lake with business models
+- Characteristics: KPIs, dimensions, domain-specific views
+- Use Case: Executive dashboards, regulatory reporting
 
-***In this tutorial, we’ll implement Bronze → Silver transformation, which covers 80% of most data pipeline requirements.***
+*In this tutorial, we’ll implement Bronze → Silver transformation, which covers 80% of most data pipeline requirements.*
 
 ## Architecture Overview
 
@@ -57,19 +55,19 @@ Here’s what we’re building:
 
 ![](/madallion-arch.png)
 
-- **Orchestration:**
+- Orchestration:
 *Azure Data Factory*
 *Pipeline management and data movement*
-- **Transformation:**
+- Transformation:
 *Azure Databricks*
 *Data processing with Apache Spark*
-- **Storage:**
+- Storage:
 *Azure Data Lake Gen2*
 *Scalable data storage*
-- **Metadata:**
+- Metadata:
 *Azure SQL Database*
 *Control tables and processing logs*
-- **Security:**
+- Security:
 *Azure Key Vault*
 *Secrets management*
 
@@ -77,21 +75,21 @@ Here’s what we’re building:
 
 ## Azure Data Factory
 
-- **Metadata-driven**: Configure once, process hundreds of tables
-- **Visual interface**: Easy to understand and maintain
-- **Built-in connectors**: Support for 90+ data sources
-- **Cost-effective**: Pay only for pipeline runs
+- Metadata-driven: Configure once, process hundreds of tables
+- Visual interface: Easy to understand and maintain
+- Built-in connectors: Support for 90+ data sources
+- Cost-effective: Pay only for pipeline runs
 
 ## Azure Databricks
 
-- **Apache Spark**: Distributed processing for large datasets
-- **Delta Lake**: ACID transactions, schema evolution, time travel
-- **Auto-scaling**: Clusters scale based on workload
-- **Optimization**: Automatic performance tuning
+- Apache Spark: Distributed processing for large datasets
+- Delta Lake: ACID transactions, schema evolution, time travel
+- Auto-scaling: Clusters scale based on workload
+- Optimization: Automatic performance tuning
 
 ## Delta Lake Deep Dive
 
-**Delta Lake** is the secret sauce that makes our Silver layer powerful:
+Delta Lake is the secret sauce that makes our Silver layer powerful:
 
 - ACID Transactions
 
@@ -181,10 +179,10 @@ CREATE TABLE ctl.ProcessingStatus (
 
 This schema enables us to:
 
-- **Configure new tables** without code changes
-- **Track processing status** in real-time
-- **Handle errors** with detailed logging
-- **Support multiple source systems** with different connection types
+- Configure new tables without code changes
+- Track processing status in real-time
+- Handle errors with detailed logging
+- Support multiple source systems with different connection types
 
 ## Step 2: Infrastructure Deployment
 
@@ -346,13 +344,13 @@ foreach ($service in $linkedServices.GetEnumerator()) {
 Write-Host "Integration Runtime and Linked Services deployment completed" -ForegroundColor Green
 ```
 
-**What this script does:**
+What this script does:
 
-- Creates a **Self-Hosted Integration Runtime** for on-premises connectivity
-- Deploys **Key Vault linked service** for secure credential management
-- Sets up **Control Database linked service** for metadata operations
-- Configures **Data Lake linked service** for Bronze/Silver storage
-- Creates **Databricks linked service** for data transformation
+- Creates a Self-Hosted Integration Runtime for on-premises connectivity
+- Deploys Key Vault linked service for secure credential management
+- Sets up Control Database linked service for metadata operations
+- Configures Data Lake linked service for Bronze/Silver storage
+- Creates Databricks linked service for data transformation
 
 ## Script 2: Dataset Deployment
 
@@ -482,12 +480,12 @@ foreach ($dataset in $datasets.GetEnumerator()) {
 Write-Host "All datasets deployed successfully!" -ForegroundColor Green
 ```
 
-**Key Dataset Features:**
+Key Dataset Features:
 
-- **Parameterized datasets** for dynamic file paths
-- **Generic SQL dataset** that works with any source table
-- **Control database dataset** for metadata operations
-- **Compression optimization** with Snappy codec
+- Parameterized datasets for dynamic file paths
+- Generic SQL dataset that works with any source table
+- Control database dataset for metadata operations
+- Compression optimization with Snappy codec
 
 ## Script 3: Complete Pipeline Deployment
 
@@ -536,8 +534,7 @@ $bronzeIngestionPipeline = @{
             @{
                 name = "Copy to Bronze"
                 type = "Copy"
-                dependsOn = @(@{ activity = "Build Source Query"; dependencyConditions = @("Succeeded") })
-                typeProperties = @{
+                dependsOn = @(@{ activity = "Build Source Query"; dependencyConditions = @("Succeeded") }) typeProperties = @{
                     source = @{
                         type = "SqlServerSource"
                         sqlReaderQuery = @{ value = "@variables('SourceQuery')"; type = "Expression" }
@@ -554,8 +551,7 @@ $bronzeIngestionPipeline = @{
                         SchemaName = "@pipeline().parameters.TableConfig.SchemaName"
                         TableName = "@pipeline().parameters.TableConfig.TableName"
                     }
-                })
-                outputs = @(@{
+                }) outputs = @(@{
                     referenceName = "DS_Bronze_Parquet"
                     type = "DatasetReference"
                     parameters = @{
@@ -564,8 +560,7 @@ $bronzeIngestionPipeline = @{
                     }
                 })
             }
-        )
-        parameters = @{
+        ) parameters = @{
             TableConfig = @{ type = "object" }
             ProcessingDate = @{ type = "string" }
         }
@@ -599,8 +594,7 @@ $silverProcessingPipeline = @{
             @{
                 name = "ForEach Silver Table"
                 type = "ForEach"
-                dependsOn = @(@{ activity = "Get Tables for Silver"; dependencyConditions = @("Succeeded") })
-                typeProperties = @{
+                dependsOn = @(@{ activity = "Get Tables for Silver"; dependencyConditions = @("Succeeded") }) typeProperties = @{
                     items = "@activity('Get Tables for Silver').output.value"
                     isSequential = $false
                     batchCount = 4
@@ -626,8 +620,7 @@ $silverProcessingPipeline = @{
                     )
                 }
             }
-        )
-        parameters = @{
+        ) parameters = @{
             ProcessingDate = @{ type = "string" }
         }
     }
@@ -651,8 +644,7 @@ $masterPipeline = @{
             @{
                 name = "Get Active Tables"
                 type = "Lookup"
-                dependsOn = @(@{ activity = "Set Processing Date"; dependencyConditions = @("Succeeded") })
-                typeProperties = @{
+                dependsOn = @(@{ activity = "Set Processing Date"; dependencyConditions = @("Succeeded") }) typeProperties = @{
                     source = @{
                         type = "AzureSqlSource"
                         sqlReaderQuery = "SELECT t.*, ss.ConnectionString, ss.SourceSystemName, w.WatermarkValue FROM ctl.Tables t INNER JOIN ctl.SourceSystems ss ON t.SourceSystemId = ss.SourceSystemId LEFT JOIN ctl.Watermarks w ON t.TableId = w.TableId WHERE t.IsActive = 1 AND ss.IsActive = 1 ORDER BY t.Priority, t.TableId"
@@ -664,8 +656,7 @@ $masterPipeline = @{
             @{
                 name = "ForEach Table"
                 type = "ForEach"
-                dependsOn = @(@{ activity = "Get Active Tables"; dependencyConditions = @("Succeeded") })
-                typeProperties = @{
+                dependsOn = @(@{ activity = "Get Active Tables"; dependencyConditions = @("Succeeded") }) typeProperties = @{
                     items = "@activity('Get Active Tables').output.value"
                     isSequential = $false
                     batchCount = 5
@@ -688,8 +679,7 @@ $masterPipeline = @{
             @{
                 name = "Execute Silver Processing"
                 type = "ExecutePipeline"
-                dependsOn = @(@{ activity = "ForEach Table"; dependencyConditions = @("Succeeded") })
-                typeProperties = @{
+                dependsOn = @(@{ activity = "ForEach Table"; dependencyConditions = @("Succeeded") }) typeProperties = @{
                     pipeline = @{ referenceName = "PL_Silver_Processing" }
                     waitOnCompletion = $true
                     parameters = @{
@@ -697,8 +687,7 @@ $masterPipeline = @{
                     }
                 }
             }
-        )
-        parameters = @{
+        ) parameters = @{
             ProcessingDate = @{ type = "string"; defaultValue = "" }
             SourceSystemName = @{ type = "string"; defaultValue = "" }
             TableName = @{ type = "string"; defaultValue = "" }
@@ -736,11 +725,11 @@ Remove-Item "PL_Master_Orchestrator.json" -Force
 Write-Host "All pipelines deployed successfully!" -ForegroundColor Green
 ```
 
-**Pipeline Architecture:**
+Pipeline Architecture:
 
-1. **Bronze Ingestion Pipeline**: Extracts data from source systems to Bronze layer
-2. **Silver Processing Pipeline**: Transforms Bronze data to Silver with quality controls
-3. **Master Orchestrator Pipeline**: Coordinates the entire process with error handling
+1. Bronze Ingestion Pipeline: Extracts data from source systems to Bronze layer
+2. Silver Processing Pipeline: Transforms Bronze data to Silver with quality controls
+3. Master Orchestrator Pipeline: Coordinates the entire process with error handling
 
 ## Step 3: Databricks Transformation Logic
 
@@ -752,31 +741,17 @@ The heart of our Silver layer processing happens in Databricks:
 
 ```
 # Parameter Configuration
-dbutils.widgets.text("table_id", "")
-dbutils.widgets.text("schema_name", "")
-dbutils.widgets.text("table_name", "")
-dbutils.widgets.text("bronze_path", "")
-dbutils.widgets.text("silver_path", "")
-dbutils.widgets.text("processing_date", "")
-dbutils.widgets.text("primary_keys", "")
-dbutils.widgets.text("load_type", "Full")
+dbutils.widgets.text("table_id", "") dbutils.widgets.text("schema_name", "") dbutils.widgets.text("table_name", "") dbutils.widgets.text("bronze_path", "") dbutils.widgets.text("silver_path", "") dbutils.widgets.text("processing_date", "") dbutils.widgets.text("primary_keys", "") dbutils.widgets.text("load_type", "Full")
 ```
 
 ```
 # Extract Parameters
-table_id = int(dbutils.widgets.get("table_id"))
-schema_name = dbutils.widgets.get("schema_name")
-table_name = dbutils.widgets.get("table_name")
-bronze_path = dbutils.widgets.get("bronze_path")
-silver_path = dbutils.widgets.get("silver_path")
-processing_date = dbutils.widgets.get("processing_date")
-primary_keys = dbutils.widgets.get("primary_keys").split(",") if dbutils.widgets.get("primary_keys") else []
+table_id = int(dbutils.widgets.get("table_id")) schema_name = dbutils.widgets.get("schema_name") table_name = dbutils.widgets.get("table_name") bronze_path = dbutils.widgets.get("bronze_path") silver_path = dbutils.widgets.get("silver_path") processing_date = dbutils.widgets.get("processing_date") primary_keys = dbutils.widgets.get("primary_keys").split(",") if dbutils.widgets.get("primary_keys") else []
 load_type = dbutils.widgets.get("load_type")
 ```
 
 ```
-print(f"Processing: {schema_name}.{table_name}")
-print(f"Load Type: {load_type}")
+print(f"Processing: {schema_name}.{table_name}") print(f"Load Type: {load_type}")
 ```
 
 ```
@@ -793,17 +768,11 @@ bronze_file_path = f"{bronze_path}/{processing_date}/{table_name}_{processing_da
 
 ```
 try:
-    bronze_df = spark.read.parquet(bronze_file_path)
-    bronze_count = bronze_df.count()
-    print(f"Successfully read {bronze_count} records")
-except Exception as e:
+    bronze_df = spark.read.parquet(bronze_file_path) bronze_count = bronze_df.count() print(f"Successfully read {bronze_count} records") except Exception as e:
     # Fallback to wildcard pattern
     bronze_wildcard_path = f"{bronze_path}/{processing_date}/*.parquet"
     try:
-        bronze_df = spark.read.parquet(bronze_wildcard_path)
-        bronze_count = bronze_df.count()
-        print(f"Read {bronze_count} records from wildcard path")
-    except Exception as e2:
+        bronze_df = spark.read.parquet(bronze_wildcard_path) bronze_count = bronze_df.count() print(f"Read {bronze_count} records from wildcard path") except Exception as e2:
         error_result = {"status": "failed", "error": str(e2)}
         dbutils.notebook.exit(json.dumps(error_result))
 ```
@@ -822,18 +791,14 @@ silver_df = bronze_df \
 # Data Quality: Remove Duplicates
 duplicates_removed = 0
 if primary_keys and primary_keys[0].strip():
-    initial_count = silver_df.count()
-    silver_df = silver_df.dropDuplicates(primary_keys)
-    final_count = silver_df.count()
-    duplicates_removed = initial_count - final_count
+    initial_count = silver_df.count() silver_df = silver_df.dropDuplicates(primary_keys) final_count = silver_df.count() duplicates_removed = initial_count - final_count
     print(f"Removed {duplicates_removed} duplicates")
 ```
 
 ```
 # Ensure Silver Directory Exists
 try:
-    dbutils.fs.ls(silver_path)
-except:
+    dbutils.fs.ls(silver_path) except:
     dbutils.fs.mkdirs(silver_path)
 ```
 
@@ -845,36 +810,25 @@ if load_type == "Full":
         .mode("overwrite") \
         .option("overwriteSchema", "true") \
         .partitionBy("_processing_date") \
-        .save(silver_path)
-    print(f"Full load completed: {silver_df.count()} records")
-    
-elif load_type == "Incremental":
+        .save(silver_path) print(f"Full load completed: {silver_df.count()} records") elif load_type == "Incremental":
     if DeltaTable.isDeltaTable(spark, silver_path):
-        silver_table = DeltaTable.forPath(spark, silver_path)
-        merge_condition = " AND ".join([f"source.{pk.strip()} = target.{pk.strip()}" for pk in primary_keys])
-        
-        silver_table.alias("target").merge(
+        silver_table = DeltaTable.forPath(spark, silver_path) merge_condition = " AND ".join([f"source.{pk.strip()} = target.{pk.strip()}" for pk in primary_keys]) silver_table.alias("target").merge(
             silver_df.alias("source"),
             merge_condition
         ).whenMatchedUpdateAll() \
          .whenNotMatchedInsertAll() \
-         .execute()
-        print("Incremental merge completed")
-    else:
+         .execute() print("Incremental merge completed") else:
         silver_df.write \
             .format("delta") \
             .mode("overwrite") \
             .partitionBy("_processing_date") \
-            .save(silver_path)
-        print("Initial delta table created")
+            .save(silver_path) print("Initial delta table created")
 ```
 
 ```
 # Optimize Table for Performance
 try:
-    spark.sql(f"OPTIMIZE delta.`{silver_path}`")
-    print("Table optimized")
-except Exception as e:
+    spark.sql(f"OPTIMIZE delta.`{silver_path}`") print("Table optimized") except Exception as e:
     print(f"Optimization skipped: {e}")
 ```
 
@@ -883,13 +837,13 @@ except Exception as e:
 dbutils.notebook.exit("SUCCESS")
 ```
 
-**Key Transformation Features:**
+Key Transformation Features:
 
-- **Metadata Enrichment**: Adds lineage tracking columns
-- **Data Quality**: Duplicate removal based on primary keys
-- **Delta Lake Integration**: ACID transactions and performance optimization
-- **Flexible Loading**: Supports both full and incremental patterns
-- **Error Handling**: Comprehensive error capture and reporting
+- Metadata Enrichment: Adds lineage tracking columns
+- Data Quality: Duplicate removal based on primary keys
+- Delta Lake Integration: ACID transactions and performance optimization
+- Flexible Loading: Supports both full and incremental patterns
+- Error Handling: Comprehensive error capture and reporting
 
 ## Step 4: Configuration and Deployment
 
@@ -962,8 +916,7 @@ copy config/config-template.json config/config.json
 
 ```sql
 -- 1. Register source system
-INSERT INTO ctl.SourceSystems (SourceSystemName, SourceSystemType, ConnectionString)
-VALUES ('MY_ERP_SYSTEM', 'SqlServer', 'Server=myserver;Database=erp;...');
+INSERT INTO ctl.SourceSystems (SourceSystemName, SourceSystemType, ConnectionString) VALUES ('MY_ERP_SYSTEM', 'SqlServer', 'Server=myserver;Database=erp;...');
 ```
 
 ```
@@ -1032,11 +985,11 @@ LIMIT 10;
 
 ## Performance Optimization Tips
 
-1. **Partition Strategy**: Partition by processing date for time-based queries
-2. **Z-Ordering**: Use Z-ORDER on frequently queried columns
-3. **File Sizes**: Target 128MB-1GB file sizes for optimal performance
-4. **Cluster Sizing**: Start with 2–4 workers, scale based on data volume
-5. **Delta Optimization**: Enable auto-optimization for regular maintenance
+1. Partition Strategy: Partition by processing date for time-based queries
+2. Z-Ordering: Use Z-ORDER on frequently queried columns
+3. File Sizes: Target 128MB-1GB file sizes for optimal performance
+4. Cluster Sizing: Start with 2–4 workers, scale based on data volume
+5. Delta Optimization: Enable auto-optimization for regular maintenance
 
 ## Real-World Results
 
@@ -1044,16 +997,16 @@ After implementing this architecture for several enterprise clients, here are th
 
 ## Performance Metrics
 
-- **Cost Reduction**: 60–70% reduction compared to traditional ETL tools
-- **Reliability**: 99.9% success rate with automatic retry mechanisms
-- **Scalability**: Linear scaling from GB to TB without code changes
+- Cost Reduction: 60–70% reduction compared to traditional ETL tools
+- Reliability: 99.9% success rate with automatic retry mechanisms
+- Scalability: Linear scaling from GB to TB without code changes
 
 ## Business Impact
 
-- **Time to Market**: New data sources onboarded in hours instead of weeks
-- **Data Quality**: 95% reduction in data quality issues
-- **Operational Efficiency**: 80% reduction in manual intervention
-- **Cost Savings**: $50K+ annual savings on licensing and infrastructure
+- Time to Market: New data sources onboarded in hours instead of weeks
+- Data Quality: 95% reduction in data quality issues
+- Operational Efficiency: 80% reduction in manual intervention
+- Cost Savings: $50K+ annual savings on licensing and infrastructure
 
 ## What’s Next? Extending to Gold Layer
 
@@ -1061,10 +1014,10 @@ The architecture we’ve built provides a solid foundation for Gold layer develo
 
 ## Gold Layer Characteristics
 
-- **Business-Specific Models**: Customer 360, Product Analytics, Financial KPIs
-- **Aggregated Data**: Pre-calculated metrics for dashboard performance
-- **Domain Data Marts**: Sales, Marketing, Finance-specific views
-- **API-Ready**: Optimized for consumption by applications and reports
+- Business-Specific Models: Customer 360, Product Analytics, Financial KPIs
+- Aggregated Data: Pre-calculated metrics for dashboard performance
+- Domain Data Marts: Sales, Marketing, Finance-specific views
+- API-Ready: Optimized for consumption by applications and reports
 
 ## Implementation Approach
 
@@ -1079,29 +1032,28 @@ def create_customer_360(silver_customers, silver_orders, silver_interactions):
             sum("order_amount").alias("total_spent"),
             count("order_id").alias("total_orders"),
             max("last_interaction_date").alias("last_activity")
-        )
-    return customer_360
+        ) return customer_360
 ```
 
 ## Conclusion
 
 We’ve built a production-ready data pipeline that:
 
-**Scales automatically** with your data growth
-**Requires minimal maintenance** through metadata-driven configuration
-**Provides enterprise-grade reliability** with comprehensive error handling
-**Optimizes costs** through efficient resource utilization
-**Ensures data quality** with built-in validation and monitoring
+Scales automatically with your data growth
+Requires minimal maintenance through metadata-driven configuration
+Provides enterprise-grade reliability with comprehensive error handling
+Optimizes costs through efficient resource utilization
+Ensures data quality with built-in validation and monitoring
 
 ## Key Takeaways:
 
-1. **Medallion Architecture** provides a clear separation of concerns and data quality layers
-2. **Delta Lake** is essential for reliable, performant data processing at scale
-3. **Metadata-driven approaches** dramatically reduce development and maintenance overhead
-4. **Infrastructure as Code** enables repeatable, reliable deployments
-5. **Proper monitoring and error handling** are critical for production systems
+1. Medallion Architecture provides a clear separation of concerns and data quality layers
+2. Delta Lake is essential for reliable, performant data processing at scale
+3. Metadata-driven approaches dramatically reduce development and maintenance overhead
+4. Infrastructure as Code enables repeatable, reliable deployments
+5. Proper monitoring and error handling are critical for production systems
 
-## **Screenshots From ADF**
+## Screenshots From ADF
 
 ![](https://miro.medium.com/v2/resize:fit:1400/1*3NlR5i3t8eFEtmM9ePrWsg.png)
 
@@ -1113,7 +1065,7 @@ We’ve built a production-ready data pipeline that:
 
 You can find the complete implementation with all scripts, notebooks, and documentation at:
 
-**GitHub Repository**: [Azure Data Pipeline - Medallion Architecture](https://github.com/yasarkocyigit/MetadataADFIngestion)
+GitHub Repository: [Azure Data Pipeline - Medallion Architecture](https://github.com/yasarkocyigit/MetadataADFIngestion)
 
 ## What You Get:
 
@@ -1128,15 +1080,15 @@ Ready to transform your organization’s data processing capabilities? Clone the
 
 ## Next Steps
 
-1. **Share the Gold Layer:**
+1. Share the Gold Layer:
 I will provide details and implementation for the gold layer.
-2. **Create LDW on Synapse Serverless SQL Pool:**
+2. Create LDW on Synapse Serverless SQL Pool:
 I’ll build a Logical Data Warehouse (LDW) on top of the gold layer using Serverless SQL Pool.
-3. **Migrate Report Sources:**
+3. Migrate Report Sources:
 The next phase will be migrating report data sources from Serverless SQL Pool to Fabric Shortcuts and SQL Endpoints.
-4. **Enable Databricks UC for Reporting:**
+4. Enable Databricks UC for Reporting:
 We’ll leverage Databricks Unity Catalog to access the gold layer directly for reporting purposes.
-5. **ADF to Fabric Data Factory Migration:**
+5. ADF to Fabric Data Factory Migration:
 I am also planning to migrate the Azure Data Factory pipelines to Fabric Data Factory for a fully modern, end-to-end architecture.
 
 Stay tuned for updates!

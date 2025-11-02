@@ -16,12 +16,12 @@ draft: false
 
 This is Part 6 of our comprehensive series on building production-ready data pipelines with Azure:
 
-- [**Part 1: Complete Guide to Medallion Architecture](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd)** - Foundation of Bronze, Silver, and Gold layers
-- [**Part 2: Unity Catalog Integration](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-2-unity-catalog-integration-689b52cb71b2)** - Implementing data governance and catalog
-- [**Part 3: Advanced Unity Catalog Table Management](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-3-advanced-unity-catalog-table-d456edbd7f47)** - Deep dive into table optimization
-- [**Part 4: From Mount Points to Unity Catalog](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-4-from-mount-points-to-unity-catalog-696f8dd634a1)** - Migration strategies and best practices
-- [**Part 5: Implementing CI/CD for Azure Data Factory](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-5-implementing-ci-cd-for-azure-data-fb19c679311b)** - DevOps practices for data pipelines
-- **Part 6: Gold Layer Implementation** (This article) - Advanced scheduling and dependency management
+- [Part 1: Complete Guide to Medallion Architecture](/blog/azure-part-1-medallion-architecture) - Foundation of Bronze, Silver, and Gold layers
+- [Part 2: Unity Catalog Integration](/blog/azure-part-2-unity-catalog) - Implementing data governance and catalog
+- [Part 3: Advanced Unity Catalog Table Management](/blog/azure-part-3-advanced-unity) - Deep dive into table optimization
+- [Part 4: From Mount Points to Unity Catalog](/blog/azure-part-4-mount-to-uc) - Migration strategies and best practices
+- [Part 5: Implementing CI/CD for Azure Data Factory](/blog/azure-part-1-medallion-architecture) - DevOps practices for data pipelines
+- Part 6: Gold Layer Implementation (This article) - Advanced scheduling and dependency management
 
 ## Introduction
 
@@ -71,11 +71,11 @@ gold_layer = {
 
 ## Design Principles
 
-1. **Business-Driven**: Every Gold table serves specific business needs
-2. **Performance-Optimized**: Pre-aggregated for fast query response
-3. **Dependency-Aware**: Only processes when source data is ready
-4. **Schedule-Flexible**: Supports various refresh frequencies
-5. **Self-Documenting**: Clear naming and metadata
+1. Business-Driven: Every Gold table serves specific business needs
+2. Performance-Optimized: Pre-aggregated for fast query response
+3. Dependency-Aware: Only processes when source data is ready
+4. Schedule-Flexible: Supports various refresh frequencies
+5. Self-Documenting: Clear naming and metadata
 
 ## 2. Building the Control Framework
 
@@ -139,15 +139,13 @@ CREATE TABLE ctl.GoldSLATracking (
 ```sql
 -- Example: Configure a daily sales summary Gold table
 INSERT INTO ctl.GoldLayerConfig 
-(GoldTableName, GoldCategory, NotebookPath, RefreshFrequency, BusinessOwner, SLAHours, Priority)
-VALUES 
+(GoldTableName, GoldCategory, NotebookPath, RefreshFrequency, BusinessOwner, SLAHours, Priority) VALUES 
 ('daily_sales_summary', 'aggregation', '/Workspace/Gold/sales_summary', 'daily', 'Sales Team', 4, 100);
 ```
 
 ```
 -- Define dependencies
-INSERT INTO ctl.GoldDependencies (GoldConfigId, DependentTableId, DependencyType, MinimumFreshness)
-SELECT 
+INSERT INTO ctl.GoldDependencies (GoldConfigId, DependentTableId, DependencyType, MinimumFreshness) SELECT 
     gc.GoldConfigId,
     t.TableId,
     'required',
@@ -191,8 +189,7 @@ BEGIN
             -- Count total dependencies
             (SELECT COUNT(*) FROM ctl.GoldDependencies WHERE GoldConfigId = gc.GoldConfigId) as TotalDependencies,
             -- Count completed dependencies (DISTINCT to avoid duplicates)
-            (SELECT COUNT(DISTINCT gd.DependentTableId)
-             FROM ctl.GoldDependencies gd
+            (SELECT COUNT(DISTINCT gd.DependentTableId) FROM ctl.GoldDependencies gd
              INNER JOIN ctl.ProcessingStatus ps ON ps.TableId = gd.DependentTableId
              WHERE gd.GoldConfigId = gc.GoldConfigId
              AND ps.Layer = 'Silver'
@@ -219,8 +216,7 @@ BEGIN
         FROM ctl.GoldLayerConfig gc
         WHERE gc.IsActive = 1
         AND (@GoldTableName IS NULL OR gc.GoldTableName = @GoldTableName)
-    )
-    SELECT 
+    ) SELECT 
         GoldConfigId,
         GoldTableName,
         GoldPath,
@@ -239,8 +235,7 @@ BEGIN
     WHERE 
         ShouldRun = 1
         AND TotalDependencies = CompletedDependencies
-        -- Time-based duplicate prevention (60-minute window)
-        AND (
+        -- Time-based duplicate prevention (60-minute window) AND (
             @ForceRerun = 1 
             OR NOT EXISTS (
                 SELECT 1 FROM ctl.ProcessingStatus ps
@@ -251,18 +246,17 @@ BEGIN
                 AND ps.EndTime IS NOT NULL
                 AND DATEDIFF(MINUTE, ps.EndTime, @CurrentDateTime) < 60
             )
-        )
-    ORDER BY Priority, GoldConfigId;
+        ) ORDER BY Priority, GoldConfigId;
 END
 GO
 ```
 
 ## Key Features of Dependency Management
 
-1. **Distinct Counting**: Prevents duplicate dependency counts
-2. **Freshness Check**: Ensures Silver data is recent enough
-3. **Partial Dependencies**: Supports optional dependencies
-4. **Priority-Based Execution**: Processes critical tables first
+1. Distinct Counting: Prevents duplicate dependency counts
+2. Freshness Check: Ensures Silver data is recent enough
+3. Partial Dependencies: Supports optional dependencies
+4. Priority-Based Execution: Processes critical tables first
 
 ## 4. Flexible Scheduling with CRON Expressions
 
@@ -294,8 +288,7 @@ Our Gold Layer supports various scheduling patterns through a combination of pre
 
 ```sql
 -- Example: Different schedules for different business needs
-INSERT INTO ctl.GoldLayerConfig (GoldTableName, RefreshFrequency, RefreshSchedule, NotebookPath)
-VALUES 
+INSERT INTO ctl.GoldLayerConfig (GoldTableName, RefreshFrequency, RefreshSchedule, NotebookPath) VALUES 
 -- Standard daily report
 ('daily_revenue_summary', 'daily', NULL, '/Workspace/Gold/revenue_summary'),
 ```
@@ -388,15 +381,11 @@ The Gold Processing Pipeline implements intelligent execution logic that only pr
 ```bash
 # Gold Layer Notebook Template
 # Parameters
-dbutils.widgets.text("processing_date", "")
-dbutils.widgets.text("gold_config_id", "")
-dbutils.widgets.text("gold_table_name", "")
+dbutils.widgets.text("processing_date", "") dbutils.widgets.text("gold_config_id", "") dbutils.widgets.text("gold_table_name", "")
 ```
 
 ```
-processing_date = dbutils.widgets.get("processing_date")
-gold_config_id = dbutils.widgets.get("gold_config_id")
-gold_table_name = dbutils.widgets.get("gold_table_name")
+processing_date = dbutils.widgets.get("processing_date") gold_config_id = dbutils.widgets.get("gold_config_id") gold_table_name = dbutils.widgets.get("gold_table_name")
 ```
 
 ```
@@ -412,8 +401,7 @@ import logging
 
 ```
 # Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO) logger = logging.getLogger(__name__)
 ```
 
 ```
@@ -424,13 +412,9 @@ def create_daily_sales_summary():
     # Read Silver layer tables
     sales_orders = spark.table("silver_prod.sales_salesorderheader") \
         .filter(F.col("_processing_date") == processing_date) \
-        .filter(F.col("_is_deleted") == False)
-    
-    sales_details = spark.table("silver_prod.sales_salesorderdetail") \
+        .filter(F.col("_is_deleted") == False) sales_details = spark.table("silver_prod.sales_salesorderdetail") \
         .filter(F.col("_processing_date") == processing_date) \
-        .filter(F.col("_is_deleted") == False)
-    
-    customers = spark.table("silver_prod.sales_customer") \
+        .filter(F.col("_is_deleted") == False) customers = spark.table("silver_prod.sales_customer") \
         .filter(F.col("_processing_date") == processing_date) \
         .filter(F.col("_is_deleted") == False)
     
@@ -461,9 +445,7 @@ def create_daily_sales_summary():
     daily_summary.write \
         .mode("overwrite") \
         .option("overwriteSchema", "true") \
-        .saveAsTable(f"gold_prod.{gold_table_name}")
-    
-    return daily_summary.count()
+        .saveAsTable(f"gold_prod.{gold_table_name}") return daily_summary.count()
 ```
 
 ```
@@ -483,12 +465,8 @@ try:
         "processing_date": processing_date
     }
     
-    logger.info(f" Gold table created successfully: {result}")
-    dbutils.notebook.exit(json.dumps(result))
-    
-except Exception as e:
-    logger.error(f" Error processing Gold table: {str(e)}")
-    raise
+    logger.info(f" Gold table created successfully: {result}") dbutils.notebook.exit(json.dumps(result)) except Exception as e:
+    logger.error(f" Error processing Gold table: {str(e)}") raise
 ```
 
 ## 6. Time-Based Refresh Controls and Same-Day Reruns
@@ -517,10 +495,10 @@ AND (
 
 ## Use Cases for Same-Day Reruns
 
-1. **Bug Fixes**: Business logic corrections requiring immediate reprocessing
-2. **Data Corrections**: When Silver layer data is corrected
-3. **SLA Recovery**: Meeting deadlines after initial failures
-4. **Testing**: Development and UAT environments
+1. Bug Fixes: Business logic corrections requiring immediate reprocessing
+2. Data Corrections: When Silver layer data is corrected
+3. SLA Recovery: Meeting deadlines after initial failures
+4. Testing: Development and UAT environments
 
 ## Manual Rerun Strategies
 
@@ -533,12 +511,9 @@ EXEC ctl.sp_CheckGoldReadiness
 ```
 
 ```
--- Strategy 2: Clear success record (use with caution)
-DELETE FROM ctl.ProcessingStatus
-WHERE TableId = (SELECT GoldConfigId FROM ctl.GoldLayerConfig WHERE GoldTableName = 'daily_sales_summary')
-AND Layer = 'Gold'
-AND ProcessingDate = CAST(GETDATE() AS DATE)
-AND Status = 'Success';
+-- Strategy 2: Clear success record (use with caution) DELETE FROM ctl.ProcessingStatus
+WHERE TableId = (SELECT GoldConfigId FROM ctl.GoldLayerConfig WHERE GoldTableName = 'daily_sales_summary') AND Layer = 'Gold'
+AND ProcessingDate = CAST(GETDATE() AS DATE) AND Status = 'Success';
 ```
 
 ```
@@ -639,14 +614,12 @@ WITH SLAMetrics AS (
         gst.ProcessingDurationMinutes,
         CASE 
             WHEN gst.SLAStatus = 'breached' THEN 
-                DATEDIFF(MINUTE, gst.ExpectedTime, gst.ActualTime)
-            ELSE 0 
+                DATEDIFF(MINUTE, gst.ExpectedTime, gst.ActualTime) ELSE 0 
         END as BreachMinutes
     FROM ctl.GoldLayerConfig gc
     LEFT JOIN ctl.GoldSLATracking gst ON gc.GoldConfigId = gst.GoldConfigId
     WHERE gst.ProcessingDate >= DATEADD(DAY, -7, GETDATE())
-)
-SELECT 
+) SELECT 
     GoldTableName,
     BusinessOwner,
     COUNT(*) as TotalRuns,
@@ -689,8 +662,7 @@ BEGIN
     INNER JOIN ctl.ProcessingStatus ps ON gc.GoldConfigId = ps.TableId
     WHERE ps.Layer = 'Gold'
     AND ps.Status = 'Failed'
-    AND ps.ProcessingDate >= DATEADD(DAY, -1, GETDATE())
-    ORDER BY ps.StartTime DESC;
+    AND ps.ProcessingDate >= DATEADD(DAY, -1, GETDATE()) ORDER BY ps.StartTime DESC;
 END
 GO
 ```
@@ -713,16 +685,14 @@ The sales team needs a daily dashboard showing:
 ```sql
 -- 1. Configure the Gold table
 INSERT INTO ctl.GoldLayerConfig 
-(GoldTableName, GoldCategory, NotebookPath, RefreshFrequency, BusinessOwner, Description, SLAHours, Priority)
-VALUES 
+(GoldTableName, GoldCategory, NotebookPath, RefreshFrequency, BusinessOwner, Description, SLAHours, Priority) VALUES 
 ('daily_sales_dashboard', 'kpi', '/Workspace/Gold/sales_dashboard', 'daily', 'Sales Analytics Team', 
  'Comprehensive daily sales metrics for executive dashboard', 6, 90);
 ```
 
 ```
 -- 2. Define dependencies
-INSERT INTO ctl.GoldDependencies (GoldConfigId, DependentTableId)
-SELECT 
+INSERT INTO ctl.GoldDependencies (GoldConfigId, DependentTableId) SELECT 
     (SELECT GoldConfigId FROM ctl.GoldLayerConfig WHERE GoldTableName = 'daily_sales_dashboard'),
     TableId
 FROM ctl.Tables
@@ -771,8 +741,7 @@ sales_metrics = sales_df \
 
 ```
 # Add YoY comparison
-last_year_metrics = calculate_last_year_metrics(processing_date)
-final_metrics = sales_metrics.join(
+last_year_metrics = calculate_last_year_metrics(processing_date) final_metrics = sales_metrics.join(
     last_year_metrics, 
     ["TerritoryName", "ProductCategory"], 
     "left"
@@ -807,8 +776,7 @@ SELECT
 FROM ctl.ProcessingStatus ps
 LEFT JOIN ctl.GoldSLATracking gst ON ps.TableId = gst.GoldConfigId 
     AND ps.ProcessingDate = gst.ProcessingDate
-WHERE ps.TableId = (SELECT GoldConfigId FROM ctl.GoldLayerConfig WHERE GoldTableName = 'daily_sales_dashboard')
-AND ps.Layer = 'Gold'
+WHERE ps.TableId = (SELECT GoldConfigId FROM ctl.GoldLayerConfig WHERE GoldTableName = 'daily_sales_dashboard') AND ps.Layer = 'Gold'
 ORDER BY ps.ProcessingDate DESC;
 ```
 
@@ -829,9 +797,7 @@ def calculate_revenue_metrics(df, group_by_columns):
 
 ```
 # Use across multiple Gold tables
-territory_metrics = calculate_revenue_metrics(sales_df, ["TerritoryID"])
-product_metrics = calculate_revenue_metrics(sales_df, ["ProductID"])
-time_metrics = calculate_revenue_metrics(sales_df, [F.date_trunc("hour", "OrderDate")])
+territory_metrics = calculate_revenue_metrics(sales_df, ["TerritoryID"]) product_metrics = calculate_revenue_metrics(sales_df, ["ProductID"]) time_metrics = calculate_revenue_metrics(sales_df, [F.date_trunc("hour", "OrderDate")])
 ```
 
 ## 2. Implement Incremental Processing
@@ -881,8 +847,7 @@ BEGIN
     INNER JOIN ctl.ProcessingStatus ps ON gc.GoldConfigId = ps.TableId
     WHERE ps.Layer = 'Gold'
     AND ps.Status = 'Failed'
-    AND ps.ProcessingDate = CAST(GETDATE() AS DATE)
-    AND ps.RetryCount < @MaxRetries;
+    AND ps.ProcessingDate = CAST(GETDATE() AS DATE) AND ps.RetryCount < @MaxRetries;
     
     OPEN retry_cursor;
     FETCH NEXT FROM retry_cursor INTO @GoldConfigId;
@@ -952,8 +917,7 @@ CREATE TABLE ctl.GoldLineage (
 
 ```
 -- Document transformations
-INSERT INTO ctl.GoldLineage (GoldTableName, SourceTable, SourceLayer, TransformationLogic, BusinessRules)
-VALUES 
+INSERT INTO ctl.GoldLineage (GoldTableName, SourceTable, SourceLayer, TransformationLogic, BusinessRules) VALUES 
 ('daily_sales_dashboard', 'sales_salesorderheader', 'Silver', 
  'JOIN with territory and product tables, aggregate by date and territory', 
  'Revenue includes tax and freight, exclude cancelled orders, YoY comparison uses same day last year');
@@ -963,11 +927,11 @@ VALUES
 
 The Gold Layer represents the culmination of our data pipeline journey, transforming raw data into actionable business insights. By implementing robust dependency management, flexible scheduling, and intelligent processing logic, we’ve created a system that:
 
-- **Adapts** to changing business requirements through configuration
-- **Scales** with data volume through optimized processing
-- **Recovers** from failures automatically
-- **Meets** SLA requirements consistently
-- **Enables** self-service analytics for business users
+- Adapts to changing business requirements through configuration
+- Scales with data volume through optimized processing
+- Recovers from failures automatically
+- Meets SLA requirements consistently
+- Enables self-service analytics for business users
 
 The combination of Azure Data Factory’s orchestration capabilities, Databricks’ processing power, and our sophisticated control framework creates a production-ready Gold Layer that serves as the foundation for data-driven decision making.
 

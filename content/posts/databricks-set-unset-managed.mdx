@@ -34,7 +34,7 @@ ALTER TABLE catalog.schema.table SET MANAGED;
 ALTER TABLE catalog.schema.table UNSET MANAGED;
 ```
 
-**Why should you care?**
+Why should you care?
 
 - Zero data movement = Zero cost
 - Instant conversion (metadata-only operation)
@@ -49,16 +49,16 @@ Let me show you what happened when we converted our fact tables to managed:
 
 Managed tables aren’t just about storage location. They unlock:
 
-1. **Automatic Optimization** - No more scheduling OPTIMIZE commands
-2. **Liquid Clustering** - Next-gen data organization (managed only!)
-3. **Better Statistics** - Always fresh, always accurate
-4. **Predictive Optimization** - Databricks AI optimizes proactively
+1. Automatic Optimization - No more scheduling OPTIMIZE commands
+2. Liquid Clustering - Next-gen data organization (managed only!)
+3. Better Statistics - Always fresh, always accurate
+4. Predictive Optimization - Databricks AI optimizes proactively
 
 ## Decision Time: When to Use What?
 
 ## Use Managed Tables When:
 
-**High-Performance Analytics**
+High-Performance Analytics
 
 ```markdown
 # Perfect candidates:
@@ -68,7 +68,7 @@ Managed tables aren’t just about storage location. They unlock:
 - ML feature stores
 ```
 
-**Streaming & Frequent Updates**
+Streaming & Frequent Updates
 
 ```markdown
 # Ideal for:
@@ -79,7 +79,7 @@ Managed tables aren’t just about storage location. They unlock:
 
 ## Stick with External Tables When:
 
-**External Access Required**
+External Access Required
 
 ```markdown
 # Keep external for:
@@ -109,7 +109,7 @@ CREATE TABLE my_table CLUSTER BY (date, customer_id) AS SELECT...
 -- Cost: $ (incremental updates only)
 ```
 
-**Real-world streaming scenario:**
+Real-world streaming scenario:
 
 - Z-Order: 45-minute OPTIMIZE jobs every 4 hours
 - Liquid Clustering: Continuous optimization, zero downtime
@@ -223,13 +223,13 @@ CREATE TABLE ctl.TableTypeDecisions (
 
 After implementing this framework across our data platform:
 
-**Performance Gains:**
+Performance Gains:
 
 - Average query time: -42%
 - OPTIMIZE job time: -67%
 - Storage costs: -23% (better compression)
 
-**Operational Benefits:**
+Operational Benefits:
 
 - Manual optimization tasks: -85%
 - Failed jobs due to file conflicts: -94%

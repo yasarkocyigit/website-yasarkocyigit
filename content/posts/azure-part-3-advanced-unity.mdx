@@ -16,22 +16,22 @@ In this third installment of our series on building production-ready data pipeli
 
 ## Series Navigation
 
-- [**Part 1**: Complete Guide to Medallion Architecture](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd) - Building the foundation with Azure Data Factory and Databricks
-- [**Part 2**: Unity Catalog Integration & Advanced Features](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-2-unity-catalog-integration-689b52cb71b2) - Adding enterprise-grade governance and monitoring
+- [Part 1: Complete Guide to Medallion Architecture](/blog/azure-part-1-medallion-architecture) - Building the foundation with Azure Data Factory and Databricks
+- [Part 2: Unity Catalog Integration & Advanced Features](/blog/azure-part-1-medallion-architecture) - Adding enterprise-grade governance and monitoring
 
 ## Introduction
 
-In [Part 1](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd), we established our medallion architecture foundation with Azure Data Factory and Databricks. [Part 2](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-2-unity-catalog-integration-689b52cb71b2)introduced Unity Catalog integration for data governance. Now, we’re taking our pipeline to the next level by implementing sophisticated table management strategies that optimize performance, cost, and governance.
+In [Part 1](/blog/azure-part-1-medallion-architecture), we established our medallion architecture foundation with Azure Data Factory and Databricks. [Part 2](/blog/azure-part-1-medallion-architecture) introduced Unity Catalog integration for data governance. Now, we’re taking our pipeline to the next level by implementing sophisticated table management strategies that optimize performance, cost, and governance.
 
 ## The Challenge: External vs Managed Tables at Scale
 
 Which tables should be external, and which should be managed? This seemingly simple question has profound implications for:
 
-- **Performance**: Query execution speed and optimization capabilities
-- **Cost**: Storage costs and data duplication
-- **Governance**: Data lifecycle management and access control
-- **Flexibility**: Ability to share data across platforms
-- **Operations**: Backup, recovery, and maintenance procedures
+- Performance: Query execution speed and optimization capabilities
+- Cost: Storage costs and data duplication
+- Governance: Data lifecycle management and access control
+- Flexibility: Ability to share data across platforms
+- Operations: Backup, recovery, and maintenance procedures
 
 ## Understanding Unity Catalog Table Types
 
@@ -45,7 +45,7 @@ USING DELTA
 LOCATION 'abfss://container@storage.dfs.core.windows.net/path/to/data'
 ```
 
-**Key Characteristics:**
+Key Characteristics:
 
 - Data remains in your controlled storage location
 - Dropping the table only removes metadata, not data
@@ -62,7 +62,7 @@ CREATE TABLE catalog.schema.table_name
 AS SELECT * FROM source_data
 ```
 
-**Key Characteristics:**
+Key Characteristics:
 
 - Unity Catalog manages storage location
 - Dropping the table deletes both metadata and data
@@ -86,8 +86,7 @@ A critical requirement is having an external location named `unity-catalog-stora
 -- This MUST exist before attempting conversions
 CREATE EXTERNAL LOCATION `unity-catalog-storage`
 URL 'abfss://container@storage.dfs.core.windows.net/unity-catalog/'
-WITH (STORAGE CREDENTIAL your_storage_credential)
-COMMENT 'Unity Catalog default managed storage location';
+WITH (STORAGE CREDENTIAL your_storage_credential) COMMENT 'Unity Catalog default managed storage location';
 ```
 
 ```
@@ -109,7 +108,7 @@ ALTER TABLE catalog.schema.external_table SET MANAGED
 
 This command seamlessly converts an external table to a managed table, moving data into Unity Catalog-managed storage while preserving all metadata, permissions, and lineage.
 
-***⚠️ Important**: After conversion, the table can no longer be accessed via its original path. All consumers must use the table name instead.*
+*⚠️ Important: After conversion, the table can no longer be accessed via its original path. All consumers must use the table name instead.*
 
 ## UNSET MANAGED: Converting Managed to External
 
@@ -170,42 +169,26 @@ def manage_table_type_with_native_feature(table_name, should_be_managed):
     """
     try:
         # Get current table info
-        table_info = get_table_info(table_name)
-        
-        if not table_info['exists']:
-            print(f" Table {table_name} does not exist")
-            return False
+        table_info = get_table_info(table_name) if not table_info['exists']:
+            print(f" Table {table_name} does not exist") return False
             
         current_type = table_info['type']
         
         # Determine if action is needed
         if should_be_managed and current_type == "EXTERNAL":
             # Convert to MANAGED
-            print(f" Converting EXTERNAL → MANAGED...")
-            spark.sql(f"ALTER TABLE {table_name} SET MANAGED")
-            print(f" Successfully converted to MANAGED table")
-            return True
+            print(f" Converting EXTERNAL → MANAGED...") spark.sql(f"ALTER TABLE {table_name} SET MANAGED") print(f" Successfully converted to MANAGED table") return True
             
         elif not should_be_managed and current_type == "MANAGED":
             # Convert to EXTERNAL
-            print(f" Converting MANAGED → EXTERNAL...")
-            spark.sql(f"ALTER TABLE {table_name} UNSET MANAGED")
-            print(f" Successfully converted to EXTERNAL table")
-            return True
+            print(f" Converting MANAGED → EXTERNAL...") spark.sql(f"ALTER TABLE {table_name} UNSET MANAGED") print(f" Successfully converted to EXTERNAL table") return True
             
         else:
-            print(f" Table is already in the desired state: {current_type}")
-            return True
+            print(f" Table is already in the desired state: {current_type}") return True
             
     except Exception as e:
-        error_msg = str(e)
-        
-        if "EXTERNAL_LOCATION_DOES_NOT_EXIST" in error_msg:
-            print(" Unity Catalog storage location not configured!")
-            print(" Create 'unity-catalog-storage' external location first")
-            print(" See prerequisites section for setup instructions")
-        
-        return False
+        error_msg = str(e) if "EXTERNAL_LOCATION_DOES_NOT_EXIST" in error_msg:
+            print(" Unity Catalog storage location not configured!") print(" Create 'unity-catalog-storage' external location first") print(" See prerequisites section for setup instructions") return False
 ```
 
 ## 3. Handling Path Access After Conversion
@@ -219,14 +202,9 @@ def read_table_data(table_name, table_type, silver_path):
     """
     if table_type == "MANAGED":
         # MANAGED tables cannot be accessed via path
-        print("Reading from Unity Catalog managed table...")
-        df = spark.table(table_name)
-    else:
+        print("Reading from Unity Catalog managed table...") df = spark.table(table_name) else:
         # EXTERNAL tables can still be accessed via path
-        print("Reading from silver path...")
-        df = spark.read.format("delta").load(silver_path)
-    
-    return df
+        print("Reading from silver path...") df = spark.read.format("delta").load(silver_path) return df
 ```
 
 ## 4. Stored Procedures for Table Type Management
@@ -309,7 +287,7 @@ We conducted extensive benchmarking on our production workloads:
 
 ## Query Performance
 
-***Note**: Performance improvements may vary based on table size, query patterns, cluster configuration, and storage performance.*
+*Note: Performance improvements may vary based on table size, query patterns, cluster configuration, and storage performance.*
 
 ![](https://miro.medium.com/v2/resize:fit:1400/1*EpTxiIgQmtduL9Q6P9jYYg.png)
 
@@ -317,18 +295,18 @@ We conducted extensive benchmarking on our production workloads:
 
 Managed tables showed better compression and organization:
 
-- **External Table Size**: 1.2 TB
-- **Managed Table Size**: 987 GB
-- **Space Savings**: 17.8%
+- External Table Size: 1.2 TB
+- Managed Table Size: 987 GB
+- Space Savings: 17.8%
 
 ## Maintenance Operations
 
 Managed tables provide significant operational advantages:
 
-- **OPTIMIZE**: Auto-optimize available (vs manual for external)
-- **VACUUM**: Automatic retention management
-- **Statistics**: Auto-updated statistics
-- **Compaction**: Automatic file compaction
+- OPTIMIZE: Auto-optimize available (vs manual for external)
+- VACUUM: Automatic retention management
+- Statistics: Auto-updated statistics
+- Compaction: Automatic file compaction
 
 ## Best Practices for Table Type Selection
 
@@ -340,22 +318,19 @@ I developed a decision matrix for table type selection:
 def determine_table_type(table_metadata):
     score = 0
     
-    # Performance factors (favor managed)
-    if table_metadata['query_frequency'] > 100:  # queries/day
+    # Performance factors (favor managed) if table_metadata['query_frequency'] > 100:  # queries/day
         score += 3
     if table_metadata['is_dimension_table']:
         score += 2
     if table_metadata['average_query_time'] > 10:  # seconds
         score += 2
         
-    # Governance factors (favor managed)
-    if table_metadata['requires_row_level_security']:
+    # Governance factors (favor managed) if table_metadata['requires_row_level_security']:
         score += 3
     if table_metadata['requires_column_masking']:
         score += 2
         
-    # Flexibility factors (favor external)
-    if table_metadata['external_consumers'] > 0:
+    # Flexibility factors (favor external) if table_metadata['external_consumers'] > 0:
         score -= 3
     if table_metadata['requires_specific_location']:
         score -= 5
@@ -367,14 +342,14 @@ def determine_table_type(table_metadata):
 
 ## 2. Gradual Migration Strategy
 
-***⚠️ Important**: Once converted to MANAGED, tables cannot be accessed via direct path. Ensure all consumers are updated to use table names instead of paths before conversion.*
+*⚠️ Important: Once converted to MANAGED, tables cannot be accessed via direct path. Ensure all consumers are updated to use table names instead of paths before conversion.*
 
 Rather than converting all tables at once, implement a phased approach:
 
-- **Phase 1: Pilot (Weeks 1–2)**: Convert 5–10 small, non-critical tables
-- **Phase 2: Dimension Tables (Weeks 3–4)**: Convert frequently-joined dimension tables
-- **Phase 3: Recent Fact Tables (Weeks 5–8)**: Convert fact tables with recent data
-- **Phase 4: Historical Data (Weeks 9–12)**: Selectively convert based on access patterns
+- Phase 1: Pilot (Weeks 1–2): Convert 5–10 small, non-critical tables
+- Phase 2: Dimension Tables (Weeks 3–4): Convert frequently-joined dimension tables
+- Phase 3: Recent Fact Tables (Weeks 5–8): Convert fact tables with recent data
+- Phase 4: Historical Data (Weeks 9–12): Selectively convert based on access patterns
 
 ## 3. Cost Considerations
 
@@ -467,10 +442,10 @@ GRANT ALTER ON TABLE catalog.schema.table_name TO `user@company.com`;
 
 The introduction of SET MANAGED and UNSET MANAGED commands represents a significant evolution in Unity Catalog’s capabilities. By implementing intelligent table type management, we’ve achieved:
 
-- **Better Performance**: Through optimized storage and query execution
-- **Reduced Costs**: Via improved compression and reduced compute requirements
-- **Simplified Operations**: With automated maintenance and optimization
-- **Enhanced Governance**: Through centralized control and monitoring
+- Better Performance: Through optimized storage and query execution
+- Reduced Costs: Via improved compression and reduced compute requirements
+- Simplified Operations: With automated maintenance and optimization
+- Enhanced Governance: Through centralized control and monitoring
 
 The key to success lies not in converting everything to managed tables, but in making intelligent decisions based on specific use cases, performance requirements, and governance needs.
 

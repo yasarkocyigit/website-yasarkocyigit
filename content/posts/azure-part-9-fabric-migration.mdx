@@ -16,27 +16,20 @@ draft: false
 
 *The Evolution from Traditional Analytics to Unified Fabric Architecture*
 
-Welcome to Part 9 of our comprehensive series on building production-ready data pipelines with Azure. After establishing our complete data platform with Synapse Serverless SQL Pool integration in Part 7, today we’re embarking on the next evolutionary step: **migrating to Microsoft Fabric**.
+Welcome to Part 9 of our comprehensive series on building production-ready data pipelines with Azure. After establishing our complete data platform with Synapse Serverless SQL Pool integration in Part 7, today we’re embarking on the next evolutionary step: migrating to Microsoft Fabric.
 
 ## The Journey So Far
 
 Let me quickly recap our architectural evolution:
 
-[**Part 1: Complete Guide to Medallion Architecture](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd)** We established the foundation with Azure Data Factory, ADLS Gen2, and the medallion architecture pattern.
-
-[**Part 2: Unity Catalog Integration** ](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-2-unity-catalog-integration-689b52cb71b2)We enhanced the platform with Unity Catalog for unified governance and data lineage tracking.
-
-[**Part 3: Advanced Unity Catalog Table Management** ](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-3-advanced-unity-catalog-table-d456edbd7f47)We explored external tables, managed tables, and data quality constraints.
-
-[**Part 4: From Mount Points to Unity Catalog](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-4-from-mount-points-to-unity-catalog-696f8dd634a1)** We modernized data access patterns by migrating from mount points to Unity Catalog volumes.
-
-[**Part 5: Implementing CI/CD** ](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-5-implementing-ci-cd-for-azure-data-fb19c679311b)We automated deployments with Azure DevOps pipelines for consistent, reliable releases.
-
-[**Part 6: Gold Layer Implementation](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-6-implementing-the-gold-layer-with-c10b141dd7f3)** We built sophisticated Gold layer processing with dependency management and flexible scheduling.
-
-[**Part 7: Power BI Integration with Synapse** ](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-7-power-bi-integration-with-synapse-2346fdaf6d7f)We achieved 97.6% cost reduction by integrating Power BI through Synapse Serverless SQL Pool.
-
-[**Part 8: Row-Level Security in Power BI](https://medium.com/@kocyigityasar/building-a-productionready-data-pipeline-with-azure-part-8-implementing-enterprise-row-level-0a5fe7515c00)** We implemented enterprise-grade security with dynamic territory-based access control.
+- [Part 1: Complete Guide to Medallion Architecture](/blog/azure-part-1-medallion-architecture) – Foundation with Azure Data Factory, ADLS Gen2, and the medallion architecture pattern.
+- [Part 2: Unity Catalog Integration](/blog/azure-part-2-unity-catalog) – Unified governance and lineage with Unity Catalog.
+- [Part 3: Advanced Unity Catalog Table Management](/blog/azure-part-3-advanced-unity) – External tables, managed tables, and data quality constraints.
+- [Part 4: From Mount Points to Unity Catalog](/blog/azure-part-4-mount-to-uc) – Migration from mount points to Unity Catalog volumes.
+- [Part 5: Implementing CI/CD](/blog/azure-part-5-ci-cd) – Automated Azure DevOps pipelines for reliable releases.
+- [Part 6: Gold Layer Implementation](/blog/azure-part-6-gold-layer) – Sophisticated Gold layer processing with dependency management.
+- [Part 7: Power BI Integration with Synapse](/blog/azure-part-7-power-bi-synapse) – DirectQuery integration that reduced costs by 97.6%.
+- [Part 8: Enterprise Row-Level Security](/blog/azure-part-8-row-level-security) – Territory-based access control with dynamic security rules.
 
 Today, we’re addressing a critical evolution: migrating from Synapse Serverless SQL Pool to Microsoft Fabric’s unified analytics platform.
 
@@ -46,22 +39,22 @@ Today, we’re addressing a critical evolution: migrating from Synapse Serverles
 
 After running our Synapse Serverless SQL Pool solution in production, we’ve encountered several challenges:
 
-1. **Concurrency Bottlenecks**: Serverless SQL Pool handles only 15 concurrent requests, with additional requests queued
-2. **Performance Variability**: Cold start times ranging from 2–10 seconds impact user experience
-3. **Limited Caching**: No automatic result caching leads to repeated full scans
-4. **Complex Authentication**: Multiple connection strings and authentication methods
-5. **Fragmented Experience**: Separate services for compute, storage, and analytics
+1. Concurrency Bottlenecks: Serverless SQL Pool handles only 15 concurrent requests, with additional requests queued
+2. Performance Variability: Cold start times ranging from 2–10 seconds impact user experience
+3. Limited Caching: No automatic result caching leads to repeated full scans
+4. Complex Authentication: Multiple connection strings and authentication methods
+5. Fragmented Experience: Separate services for compute, storage, and analytics
 
 ## The Fabric Advantage
 
 Microsoft Fabric addresses these limitations with:
 
-- **Unified Platform**: Single workspace for all analytics needs
-- **OneLake Integration**: Built-in data lake with automatic optimization
-- **SQL Analytics Endpoint**: Serverless compute with enhanced performance
-- **Seamless Power BI Integration**: Native connectivity without additional configuration
-- **Improved Concurrency**: Better handling of concurrent requests
-- **Automatic Caching**: Intelligent query result caching
+- Unified Platform: Single workspace for all analytics needs
+- OneLake Integration: Built-in data lake with automatic optimization
+- SQL Analytics Endpoint: Serverless compute with enhanced performance
+- Seamless Power BI Integration: Native connectivity without additional configuration
+- Improved Concurrency: Better handling of concurrent requests
+- Automatic Caching: Intelligent query result caching
 
 ## Understanding the Technology Mapping
 
@@ -83,22 +76,22 @@ The core of our migration involves creating OneLake shortcuts that point to our 
 
 Before creating shortcuts, we need to establish a connection to our ADLS Gen2 storage account:
 
-1. **Navigate to Power BI Service** (app.powerbi.com)
-2. **Go to Settings** (gear icon) → **Manage connections and gateways**
-3. **Click on “New”** to create a new connection
-4. **Select “Azure Data Lake Storage Gen2”** as the connection type
-5. **Configure the connection**:
+1. Navigate to Power BI Service (app.powerbi.com)
+2. Go to Settings (gear icon) → Manage connections and gateways
+3. Click on “New” to create a new connection
+4. Select “Azure Data Lake Storage Gen2” as the connection type
+5. Configure the connection:
 
-- **Connection Name**: `ADLS-Gold-Layer-Connection`
-- **Storage Account URL**: `[https://yourstorage.dfs.core.windows.net`](https://yourstorage.dfs.core.windows.net)
-- **Authentication Method**: Service Principal or Managed Identity
-- **Tenant ID**: Your Azure AD tenant ID
-- **Service Principal ID**: Your service principal application ID
-- **Service Principal Key**: Your service principal secret
+- Connection Name: `ADLS-Gold-Layer-Connection`
+- Storage Account URL: `[https://yourstorage.dfs.core.windows.net`](https://yourstorage.dfs.core.windows.net)
+- Authentication Method: Service Principal or Managed Identity
+- Tenant ID: Your Azure AD tenant ID
+- Service Principal ID: Your service principal application ID
+- Service Principal Key: Your service principal secret
 
-**6. Test the connection** to ensure it works
+6. Test the connection to ensure it works
 
-**7. Save the connection** and copy the Connection ID (you’ll need this for the shortcuts)
+7. Save the connection and copy the Connection ID (you’ll need this for the shortcuts)
 
 ![](https://miro.medium.com/v2/resize:fit:1400/1*YlJrbBobXVUD9qaQyELkrw.png)
 
@@ -110,10 +103,7 @@ Now we can proceed with creating the OneLake shortcuts using the connection ID f
 # Fabric notebook for automated shortcut creation
 # This runs inside a Fabric notebook with authentication already configured
 
-print("="*60)
-print("FABRIC MIGRATION: AUTOMATED SHORTCUT CREATION")
-print("="*60)
-import pandas as pd
+print("="*60) print("FABRIC MIGRATION: AUTOMATED SHORTCUT CREATION") print("="*60) import pandas as pd
 import sempy.fabric as fabric
 from notebookutils import mssparkutils
 import requests
@@ -131,8 +121,7 @@ headers = {
     "Authorization": f"Bearer {access_token}",
     "Content-Type": "application/json"
 }
-print("Creating API shortcuts under dbo schema with drop-if-exists logic...")
-api_url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspaceId}/items/{lakehouseid}/shortcuts"
+print("Creating API shortcuts under dbo schema with drop-if-exists logic...") api_url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspaceId}/items/{lakehouseid}/shortcuts"
 # Define your star schema tables
 tables_to_create = [
     ("dim_customer", "gold/star_schema/dim_customer"),
@@ -156,11 +145,8 @@ for shortcutname, goldpath in tables_to_create:
     
     # Step 2: If exists, delete it first
     if check_response.status_code == 200:
-        print(f"   Shortcut exists, deleting first...")
-        delete_response = requests.delete(check_url, headers=headers)
-        if delete_response.status_code == 200:
-            print(f"   Successfully deleted existing shortcut")
-            time.sleep(2)  # Wait for deletion to complete
+        print(f"   Shortcut exists, deleting first...") delete_response = requests.delete(check_url, headers=headers) if delete_response.status_code == 200:
+            print(f"   Successfully deleted existing shortcut") time.sleep(2)  # Wait for deletion to complete
         else:
             print(f"   Failed to delete: {delete_response.status_code} - {delete_response.text}")
     
@@ -177,51 +163,25 @@ for shortcutname, goldpath in tables_to_create:
         }
     }
     
-    response = requests.post(api_url, headers=headers, json=payload)
-    
-    if response.status_code == 201:
-        print(f"   SUCCESS: dbo.{shortcutname} created")
-        successful_shortcuts.append(shortcutname)
-    elif response.status_code == 409:
-        print(f"   ALREADY EXISTS: dbo.{shortcutname}")
-        successful_shortcuts.append(shortcutname)
-    else:
-        print(f"   FAILED: dbo.{shortcutname} - {response.status_code}")
-        print(f"   Error: {response.text}")
-        failed_shortcuts.append(shortcutname)
-    
-    time.sleep(2)
+    response = requests.post(api_url, headers=headers, json=payload) if response.status_code == 201:
+        print(f"   SUCCESS: dbo.{shortcutname} created") successful_shortcuts.append(shortcutname) elif response.status_code == 409:
+        print(f"   ALREADY EXISTS: dbo.{shortcutname}") successful_shortcuts.append(shortcutname) else:
+        print(f"   FAILED: dbo.{shortcutname} - {response.status_code}") print(f"   Error: {response.text}") failed_shortcuts.append(shortcutname) time.sleep(2)
 # Summary
-print(f"\n" + "="*60)
-print("SHORTCUT CREATION SUMMARY")
-print("="*60)
-print(f"Successful: {len(successful_shortcuts)}")
-print(f"Failed: {len(failed_shortcuts)}")
-if failed_shortcuts:
-    print(f"\nFailed shortcuts:")
-    for shortcut in failed_shortcuts:
-        print(f"  - {shortcut}")
-print("\nWaiting for shortcuts to sync...")
-time.sleep(15)
+print(f"\n" + "="*60) print("SHORTCUT CREATION SUMMARY") print("="*60) print(f"Successful: {len(successful_shortcuts)}") print(f"Failed: {len(failed_shortcuts)}") if failed_shortcuts:
+    print(f"\nFailed shortcuts:") for shortcut in failed_shortcuts:
+        print(f"  - {shortcut}") print("\nWaiting for shortcuts to sync...") time.sleep(15)
 # Test the shortcuts
-print("\nTesting dbo schema shortcuts...")
-for shortcutname, _ in tables_to_create:
+print("\nTesting dbo schema shortcuts...") for shortcutname, _ in tables_to_create:
     try:
         # Test access via dbo schema path
-        df = spark.read.format("delta").load(f"Tables/dbo/{shortcutname}")
-        count = df.count()
-        print(f"   dbo.{shortcutname}: {count:,} rows - SUCCESS")
+        df = spark.read.format("delta").load(f"Tables/dbo/{shortcutname}") count = df.count() print(f"   dbo.{shortcutname}: {count:,} rows - SUCCESS")
         
         # Create temp view for SQL access
-        df.createOrReplaceTempView(shortcutname)
-        
-    except Exception as e:
-        print(f"   dbo.{shortcutname}: Failed - {str(e)}")
-print("\nTesting SQL queries...")
-try:
+        df.createOrReplaceTempView(shortcutname) except Exception as e:
+        print(f"   dbo.{shortcutname}: Failed - {str(e)}") print("\nTesting SQL queries...") try:
     result = spark.sql("SELECT COUNT(*) as cnt FROM dim_customer").collect()[0].cnt
-    print(f"SQL test: dim_customer has {result:,} rows")
-except Exception as e:
+    print(f"SQL test: dim_customer has {result:,} rows") except Exception as e:
     print(f"SQL test failed: {str(e)}")
 ```
 
@@ -231,14 +191,14 @@ except Exception as e:
 
 After creating the shortcuts, we need to update our Power BI reports to use the new Fabric SQL Analytics Endpoint:
 
-1. **Open Power BI Desktop**
-2. **Navigate to Transform Data > Data Source Settings**
-3. **Update Connection Details**:
+1. Open Power BI Desktop
+2. Navigate to Transform Data > Data Source Settings
+3. Update Connection Details:
 
 - From: `your-synapse.sql.azuresynapse.net`
 - To: SQL Analytics Endpoint of your Fabric Lakehouse
 
-**4. Update Schema References**:
+4. Update Schema References:
 
 - From: `star_schema.table_name`
 - To: `dbo.table_name`
@@ -276,16 +236,12 @@ def validate_migration():
             fabric_count = spark.sql(f"SELECT COUNT(*) as cnt FROM {table_name}").collect()[0].cnt
             
             # Get sample data for validation
-            sample_df = spark.sql(f"SELECT * FROM {table_name} LIMIT 5")
-            
-            validation_results.append({
+            sample_df = spark.sql(f"SELECT * FROM {table_name} LIMIT 5") validation_results.append({
                 'table': table_name,
                 'row_count': fabric_count,
                 'status': 'SUCCESS',
                 'sample_rows': sample_df.count()
-            })
-            
-        except Exception as e:
+            }) except Exception as e:
             validation_results.append({
                 'table': table_name,
                 'row_count': 0,
@@ -294,12 +250,7 @@ def validate_migration():
             })
     
     # Create validation report
-    validation_df = pd.DataFrame(validation_results)
-    print("\nVALIDATION REPORT")
-    print("="*60)
-    print(validation_df.to_string())
-    
-    return validation_df
+    validation_df = pd.DataFrame(validation_results) print("\nVALIDATION REPORT") print("="*60) print(validation_df.to_string()) return validation_df
 ```
 
 ```
@@ -339,27 +290,27 @@ Result: Similar cost but with significantly better performance and features
 
 ## Pitfall 1: Schema Mismatch
 
-**Problem**: Tables created under wrong schema in Fabric **Solution**: Always specify `"path": "Tables/dbo"` in shortcut creation
+Problem: Tables created under wrong schema in Fabric Solution: Always specify `"path": "Tables/dbo"` in shortcut creation
 
 ## Pitfall 2: Authentication Failures
 
-**Problem**: Connection ID not working **Solution**: Ensure the connection is created in the same workspace
+Problem: Connection ID not working Solution: Ensure the connection is created in the same workspace
 
 ## Pitfall 3: Performance Degradation
 
-**Problem**: Queries slower than expected **Solution**: Enable V-Order optimization on Delta tables
+Problem: Queries slower than expected Solution: Enable V-Order optimization on Delta tables
 
 ## Pitfall 4: Missing Data
 
-**Problem**: Some tables not showing data **Solution**: Check Delta table version compatibility
+Problem: Some tables not showing data Solution: Check Delta table version compatibility
 
 ## Best Practices for Production Migration
 
-1. **Start with Non-Critical Reports**: Migrate development/test reports first
-2. **Use Parallel Run Period**: Keep both systems running for 2–4 weeks
-3. **Implement Monitoring**: Set up alerts for failed queries or performance issues
-4. **Document Everything**: Keep detailed migration logs
-5. **Have Rollback Plan**: Maintain ability to switch back if needed
+1. Start with Non-Critical Reports: Migrate development/test reports first
+2. Use Parallel Run Period: Keep both systems running for 2–4 weeks
+3. Implement Monitoring: Set up alerts for failed queries or performance issues
+4. Document Everything: Keep detailed migration logs
+5. Have Rollback Plan: Maintain ability to switch back if needed
 
 ## Advanced Optimization Techniques
 
@@ -374,22 +325,19 @@ for table_name, delta_path in tables_to_create:
     table_path = f"abfss://datalake@yourstorage.dfs.core.windows.net/{delta_path}"
     
     # Optimize with Z-Order
-    delta_table = DeltaTable.forPath(spark, table_path)
-    delta_table.optimize().executeZOrderBy("date_key", "customer_key")
-    
-    print(f"Optimized: {table_name}")
+    delta_table = DeltaTable.forPath(spark, table_path) delta_table.optimize().executeZOrderBy("date_key", "customer_key") print(f"Optimized: {table_name}")
 ```
 
 ## Conclusion
 
 Migrating from Synapse Serverless SQL Pool to Microsoft Fabric represents a significant step forward in our data platform evolution. The benefits are clear:
 
-- **Simplicity**: Unified platform reduces complexity
-- **Cost**: Similar or lower TCO with better features
-- **Future-Ready**: Built on Microsoft’s latest analytics platform
+- Simplicity: Unified platform reduces complexity
+- Cost: Similar or lower TCO with better features
+- Future-Ready: Built on Microsoft’s latest analytics platform
 
 The migration process, while requiring careful planning, can be largely automated using the scripts provided. The key is to approach it systematically, validate thoroughly, and maintain a rollback option during the transition period.
 
-**Have questions about the migration process?** Leave a comment below or connect with me on [LinkedIn](https://linkedin.com/in/yasarkocyigit).
+Have questions about the migration process? Leave a comment below or connect with me on [LinkedIn](https://linkedin.com/in/yasarkocyigit).
 
 #DataEngineering #MicrosoftFabric #Azure #PowerBI #DataMigration #Analytics #DataPipeline #OneLake #Synapse

@@ -16,15 +16,15 @@ draft: false
 
 ## Introduction
 
-In [Part 1](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd), we built a robust medallion architecture using Azure Data Factory and Databricks. We covered the fundamentals: Bronze → Silver → Gold data transformation, metadata-driven processing, and basic error handling.
+In [Part 1](/blog/azure-part-1-medallion-architecture), we built a robust medallion architecture using Azure Data Factory and Databricks. We covered the fundamentals: Bronze → Silver → Gold data transformation, metadata-driven processing, and basic error handling.
 
 Now, in Part 2, we’re elevating our pipeline to enterprise standards by adding:
 
-- **Unity Catalog Integration** for centralized data governance
-- **Advanced Monitoring & Reporting** with comprehensive health checks
-- **Enhanced Data Quality** validation and metrics
-- **Production-Ready Security** with Azure Key Vault integration
-- **Improved Error Handling** and recovery mechanisms
+- Unity Catalog Integration for centralized data governance
+- Advanced Monitoring & Reporting with comprehensive health checks
+- Enhanced Data Quality validation and metrics
+- Production-Ready Security with Azure Key Vault integration
+- Improved Error Handling and recovery mechanisms
 
 Let’s explore how these enhancements transform our pipeline into a truly enterprise-grade solution.
 
@@ -34,11 +34,11 @@ Since Part 1, I’ve identified several areas for improvement. Here’s what we�
 
 ## Key Enhancements:
 
-1. **Unity Catalog** for data discovery and governance
-2. **Data Quality Metrics** tracking and reporting
-3. **Pipeline Run History** for audit trails
-4. **Automated Table Registration** in Unity Catalog
-5. **Comprehensive Monitoring Dashboard**
+1. Unity Catalog for data discovery and governance
+2. Data Quality Metrics tracking and reporting
+3. Pipeline Run History for audit trails
+4. Automated Table Registration in Unity Catalog
+5. Comprehensive Monitoring Dashboard
 
 ## Unity Catalog: The Foundation of Data Governance
 
@@ -48,10 +48,10 @@ Unity Catalog is Databricks’ unified governance solution that provides a singl
 
 Before Unity Catalog, we faced several challenges:
 
-- **Scattered Metadata**: Table information spread across different systems
-- **Complex Permissions**: Managing access at storage level was cumbersome
-- **No Lineage Tracking**: Difficult to understand data dependencies
-- **Limited Discovery**: Users couldn’t easily find available datasets
+- Scattered Metadata: Table information spread across different systems
+- Complex Permissions: Managing access at storage level was cumbersome
+- No Lineage Tracking: Difficult to understand data dependencies
+- Limited Discovery: Users couldn’t easily find available datasets
 
 ## Architecture Overview
 
@@ -90,8 +90,7 @@ def convert_mount_to_abfss(mount_path):
     """Convert mount path to abfss path for Unity Catalog"""
     if mount_path.startswith('/mnt/silver'):
         return mount_path.replace('/mnt/silver', 
-            'abfss://datalake@daqprod.dfs.core.windows.net/silver')
-    return mount_path
+            'abfss://datalake@daqprod.dfs.core.windows.net/silver') return mount_path
 ```
 
 ```
@@ -124,9 +123,7 @@ We’ve added comprehensive data quality checks:
 ```css
 # Remove duplicates based on primary keys
 if primary_keys:
-    initial_count = silver_df.count()
-    silver_df = silver_df.dropDuplicates(primary_keys)
-    duplicates_removed = initial_count - silver_df.count()
+    initial_count = silver_df.count() silver_df = silver_df.dropDuplicates(primary_keys) duplicates_removed = initial_count - silver_df.count()
     
 # Add metadata columns for lineage
 silver_df = bronze_df \
@@ -195,18 +192,17 @@ We’ve created a comprehensive reporting notebook that provides insights into o
 
 ## unity_catalog_report.py Features:
 
-1. **Table Discovery**
+1. Table Discovery
 
 ```python
 def discover_unity_catalog_tables():
     """Discover all tables in the Unity Catalog schema"""
     tables_df = spark.sql(f"""
         SHOW TABLES IN {unity_catalog_name}.{unity_schema_name}
-    """)
-    return tables_df
+    """) return tables_df
 ```
 
-1. **Data Quality Validation**
+1. Data Quality Validation
 
 ```python
 def validate_data_quality():
@@ -223,15 +219,13 @@ def validate_data_quality():
     # Check for null values in critical columns
     null_check_sql = f"""
     SELECT 
-        SUM(CASE WHEN _processing_date IS NULL THEN 1 ELSE 0 END) 
-            as null_processing_date,
-        SUM(CASE WHEN _record_source IS NULL THEN 1 ELSE 0 END) 
-            as null_record_source
+        SUM(CASE WHEN _processing_date IS NULL THEN 1 ELSE 0 END) as null_processing_date,
+        SUM(CASE WHEN _record_source IS NULL THEN 1 ELSE 0 END) as null_record_source
     FROM {full_table_name}
     """
 ```
 
-1. **Comprehensive Report Generation**
+1. Comprehensive Report Generation
 
 ```bash
 # Generate report with summary statistics
@@ -295,9 +289,7 @@ We’ve improved security by integrating Azure Key Vault for all sensitive confi
 
 ```ini
 # Storage mount setup using Key Vault secrets
-client_id = dbutils.secrets.get(scope="daqprod-kv-scope", key="client-id")
-client_secret = dbutils.secrets.get(scope="daqprod-kv-scope", key="client-secret")
-tenant_id = dbutils.secrets.get(scope="daqprod-kv-scope", key="tenant-id")
+client_id = dbutils.secrets.get(scope="daqprod-kv-scope", key="client-id") client_secret = dbutils.secrets.get(scope="daqprod-kv-scope", key="client-secret") tenant_id = dbutils.secrets.get(scope="daqprod-kv-scope", key="tenant-id")
 ```
 
 ```
@@ -338,11 +330,9 @@ BEGIN
             UnitySchemaName = @UnitySchemaName,
             UnityTableName = @UnityTableName,
             RegistrationStatus = @RegistrationStatus,
-            LastUpdateDate = GETDATE()
-    WHEN NOT MATCHED THEN
+            LastUpdateDate = GETDATE() WHEN NOT MATCHED THEN
         INSERT (TableId, UnityCatalogName, UnitySchemaName, 
-                UnityTableName, ProcessingDate, RegistrationStatus)
-        VALUES (@TableId, @UnityCatalogName, @UnitySchemaName, 
+                UnityTableName, ProcessingDate, RegistrationStatus) VALUES (@TableId, @UnityCatalogName, @UnitySchemaName, 
                 @UnityTableName, @ProcessingDate, @RegistrationStatus);
 END
 ```
@@ -398,42 +388,42 @@ END
 
 With our enhancements, we’ve seen significant improvements:
 
-- **30% faster** processing with optimized Delta operations
-- **50% reduction** in duplicate data
-- **90% improvement** in data discovery time
-- **100% automated** table registration
+- 30% faster processing with optimized Delta operations
+- 50% reduction in duplicate data
+- 90% improvement in data discovery time
+- 100% automated table registration
 
 ## Best Practices Implemented
 
-1. **Idempotent Operations**: All operations can be safely retried
-2. **Comprehensive Logging**: Every step is logged for troubleshooting
-3. **Graceful Error Handling**: Failures don’t break the entire pipeline
-4. **Automated Optimization**: Delta tables are automatically optimized
-5. **Metadata Enrichment**: All tables include lineage information
+1. Idempotent Operations: All operations can be safely retried
+2. Comprehensive Logging: Every step is logged for troubleshooting
+3. Graceful Error Handling: Failures don’t break the entire pipeline
+4. Automated Optimization: Delta tables are automatically optimized
+5. Metadata Enrichment: All tables include lineage information
 
 ## Next Steps
 
-1. **Share the Gold Layer:** I will provide details and implementation for the gold layer.
-2. **Create LDW on Synapse Serverless SQL Pool:** I’ll build a Logical Data Warehouse (LDW) on top of the gold layer using Serverless SQL Pool.
-3. **Migrate Report Sources:** The next phase will be migrating report data sources from Serverless SQL Pool to Fabric Shortcuts and SQL Endpoints.
-4. **Enable Databricks UC for Reporting:** We’ll leverage Databricks Unity Catalog to access the gold layer directly for reporting purposes. - **COMPLETED**
-5. **ADF to Fabric Data Factory Migration:** I am also planning to migrate the Azure Data Factory pipelines to Fabric Data Factory for a fully modern, end-to-end architecture.
+1. Share the Gold Layer: I will provide details and implementation for the gold layer.
+2. Create LDW on Synapse Serverless SQL Pool: I’ll build a Logical Data Warehouse (LDW) on top of the gold layer using Serverless SQL Pool.
+3. Migrate Report Sources: The next phase will be migrating report data sources from Serverless SQL Pool to Fabric Shortcuts and SQL Endpoints.
+4. Enable Databricks UC for Reporting: We’ll leverage Databricks Unity Catalog to access the gold layer directly for reporting purposes. - COMPLETED
+5. ADF to Fabric Data Factory Migration: I am also planning to migrate the Azure Data Factory pipelines to Fabric Data Factory for a fully modern, end-to-end architecture.
 
 ## Key Takeaways
 
-1. **Unity Catalog is Essential**: For any production Databricks deployment
-2. **Automation is Key**: Manual processes don’t scale
-3. **Monitor Everything**: You can’t improve what you don’t measure
-4. **Quality First**: Bad data is worse than no data
-5. **Security by Design**: Not an afterthought
+1. Unity Catalog is Essential: For any production Databricks deployment
+2. Automation is Key: Manual processes don’t scale
+3. Monitor Everything: You can’t improve what you don’t measure
+4. Quality First: Bad data is worse than no data
+5. Security by Design: Not an afterthought
 
 ## Implementation Tips
 
-1. **Start Small**: Implement Unity Catalog for one schema first
-2. **Test Thoroughly**: Especially the table registration process
-3. **Plan Permissions**: Design your access model before implementation
-4. **Monitor Costs**: Unity Catalog can impact storage costs
-5. **Document Everything**: Future you will thank present you
+1. Start Small: Implement Unity Catalog for one schema first
+2. Test Thoroughly: Especially the table registration process
+3. Plan Permissions: Design your access model before implementation
+4. Monitor Costs: Unity Catalog can impact storage costs
+5. Document Everything: Future you will thank present you
 
 ## Conclusion
 
@@ -441,9 +431,9 @@ By adding Unity Catalog and these enterprise features to our medallion architect
 
 The journey from Part 1’s basic pipeline to Part 2’s enterprise-grade solution shows how Azure’s ecosystem can grow with your needs. Start simple, then add sophistication as your requirements evolve.
 
-*Have questions or suggestions? Feel free to reach out or leave a comment below. Don’t forget to check out [Part 1](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd) if you haven’t already!*
+*Have questions or suggestions? Feel free to reach out or leave a comment below. Don’t forget to check out [Part 1](/blog/azure-part-1-medallion-architecture) if you haven’t already!*
 
-**Updated GitHub Repository**: [Azure Data Pipeline - Medallion Architecture](https://github.com/yasarkocyigit/MetadataADFIngestion)
+Updated GitHub Repository: [Azure Data Pipeline - Medallion Architecture](https://github.com/yasarkocyigit/MetadataADFIngestion)
 
 ## Pipeline Execution Overview
 

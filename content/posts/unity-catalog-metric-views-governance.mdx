@@ -14,7 +14,7 @@ As data platforms evolve, the need for centrally governed, reusable, and flexibl
 
 ## What Are Metric Views?
 
-Metric Views allow data teams to define **semantic models** - reusable business metrics that can be consistently queried and shared. These definitions:
+Metric Views allow data teams to define semantic models - reusable business metrics that can be consistently queried and shared. These definitions:
 
 - Are written in YAML
 - Are saved and secured in Unity Catalog
@@ -25,21 +25,21 @@ This approach brings a governed semantic layer to the Lakehouse, similar to what
 
 ## Key Benefits
 
-- **Single source of truth** for business logic
-- **Governance and access control** via Unity Catalog
-- **Dynamic slicing** by dimensions at query time
-- **Central reuse** across dashboards, notebooks, and Genie
-- **Window and star schema support** via YAML
+- Single source of truth for business logic
+- Governance and access control via Unity Catalog
+- Dynamic slicing by dimensions at query time
+- Central reuse across dashboards, notebooks, and Genie
+- Window and star schema support via YAML
 
 ## Creating Metric Views
 
 ## Method 1: Catalog Explorer (UI)
 
-1. Go to **Catalog Explorer** in your Databricks workspace
+1. Go to Catalog Explorer in your Databricks workspace
 2. Navigate to your target catalog and schema
-3. Click **+ Create → Metric View**
+3. Click + Create → Metric View
 4. Paste your YAML definition
-5. Click **Create** to publish the Metric View
+5. Click Create to publish the Metric View
 
 ## Sample YAML for Sales Metrics
 
@@ -167,7 +167,7 @@ measures:
     expr: MIN(TotalDue)
 ```
 
-**Example:**
+Example:
 
 ![](https://miro.medium.com/v2/resize:fit:1400/1*TTIryB31R8OpsPIg_sAEcg.png)
 
@@ -175,12 +175,12 @@ measures:
 
 1. Save the YAML content to a file (e.g., `sales_metrics.yaml`)
 2. Upload the file to Databricks Workspace
-3. In Catalog Explorer, select **Create Metric View**
+3. In Catalog Explorer, select Create Metric View
 4. Choose your YAML file or paste the content
 
 ## Querying Metric Views
 
-Queries are executed through SQL Warehouses or notebooks. Use the **MEASURE()** function for any defined measures.
+Queries are executed through SQL Warehouses or notebooks. Use the MEASURE() function for any defined measures.
 
 ## Basic Query Example
 
@@ -207,11 +207,11 @@ FROM main.silver_prod.sales_metric_view
 GROUP BY `Order Status`, `Order Channel`;
 ```
 
-**Important Notes:**
+Important Notes:
 
-- Use **GROUP BY** for all selected dimensions
+- Use GROUP BY for all selected dimensions
 - Only defined dimensions and measures can be used in queries
-- The **MEASURE()** function is mandatory
+- The MEASURE() function is mandatory
 
 ## Adding Joins (Star Schema Modeling)
 
@@ -230,10 +230,10 @@ dimensions:
     expr: customer.CustomerSegment
 ```
 
-**Rules:**
+Rules:
 
-- Only **LEFT OUTER JOIN** is supported
-- Reference base table columns with **source.** prefix
+- Only LEFT OUTER JOIN is supported
+- Reference base table columns with source. prefix
 
 ## Window Metrics (Experimental)
 
@@ -259,7 +259,7 @@ GRANT SELECT ON main.analytics.sales_metrics TO `finance_team`;
 
 ## Using with Genie
 
-In Catalog Explorer, find your metric view and click **“Ask Genie Preview”**. You can analyze with natural language queries:
+In Catalog Explorer, find your metric view and click “Ask Genie Preview”. You can analyze with natural language queries:
 
 - “Show me monthly revenue trend”
 - “What is the cancellation rate by channel?”
@@ -267,8 +267,8 @@ In Catalog Explorer, find your metric view and click **“Ask Genie Preview”**
 
 ## Limitations
 
-- No **SELECT *** support
-- No nested aggregations on **MEASURE()**
+- No SELECT * support
+- No nested aggregations on MEASURE()
 - Joins must be declared in YAML, not at query time
 - Delta Sharing is not yet supported
 - Joined tables cannot have complex data types (like MAP)
@@ -289,11 +289,11 @@ Ensure auditability and version control over metrics used in external reporting.
 
 ## Best Practices
 
-1. **Naming:** Use business-friendly, clear names
-2. **Documentation:** Add descriptions for each dimension and measure
-3. **Performance:** Use filters for large tables
-4. **Version Control:** Store YAML files in Git
-5. **Testing:** Start with simple metrics, then add complexity
+1. Naming: Use business-friendly, clear names
+2. Documentation: Add descriptions for each dimension and measure
+3. Performance: Use filters for large tables
+4. Version Control: Store YAML files in Git
+5. Testing: Start with simple metrics, then add complexity
 
 ## Conclusion
 

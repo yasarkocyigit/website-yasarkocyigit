@@ -22,23 +22,12 @@ Welcome back to our comprehensive series on building production-ready data pipel
 
 Before diving into today’s topic, let me quickly recap what I’ve built:
 
-[**Part 1: Complete Guide to Medallion Architecture](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd)**
-I established the foundation with Azure Data Factory, ADLS Gen2, and implemented the medallion architecture pattern - Bronze, Silver, and Gold layers.
-
-[**Part 2: Unity Catalog Integration](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-2-unity-catalog-integration-689b52cb71b2)**
-I enhanced the platform with Unity Catalog for unified governance, implementing fine-grained access controls and data lineage tracking.
-
-[**Part 3: Advanced Unity Catalog Table Management](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-3-advanced-unity-catalog-table-d456edbd7f47)**
-I dove deep into external tables, managed tables, and implementing data quality constraints with Unity Catalog.
-
-[**Part 4: From Mount Points to Unity Catalog](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-4-from-mount-points-to-unity-catalog-696f8dd634a1)**
-I modernized data access patterns, migrating from traditional mount points to Unity Catalog’s volume management.
-
-[**Part 5: Implementing CI/CD](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-5-implementing-ci-cd-for-azure-data-fb19c679311b)**
-I automated the deployment pipeline with Azure DevOps, implementing infrastructure as code and automated testing.
-
-[**Part 6: Implementing the Gold Layer](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-6-implementing-the-gold-layer-with-c10b141dd7f3)**
-I created business-ready datasets in the Gold layer, implementing aggregations and business logic with Delta Lake.
+- [Part 1: Complete Guide to Medallion Architecture](/blog/azure-part-1-medallion-architecture) – Foundation with Azure Data Factory, ADLS Gen2, and the medallion pattern.
+- [Part 2: Unity Catalog Integration](/blog/azure-part-2-unity-catalog) – Unified governance with fine-grained access controls and lineage tracking.
+- [Part 3: Advanced Unity Catalog Table Management](/blog/azure-part-3-advanced-unity) – External tables, managed tables, and data quality enforcement.
+- [Part 4: From Mount Points to Unity Catalog](/blog/azure-part-4-mount-to-uc) – Migrated traditional mount points to Unity Catalog volumes.
+- [Part 5: Implementing CI/CD](/blog/azure-part-5-ci-cd) – Automated deployment with Azure DevOps, infrastructure as code, and testing.
+- [Part 6: Gold Layer Implementation](/blog/azure-part-6-gold-layer) – Delivered business-ready Gold layer datasets with Delta Lake transformations.
 
 Now, let’s complete the architecture by connecting Power BI to the Gold layer in the most cost-effective and performant way.
 
@@ -48,7 +37,7 @@ After building a Gold layer with carefully crafted star schemas and aggregated d
 
 The stakes were high. Choose wrong, and you could end up with:
 
-- **Thousands of dollars in unnecessary compute costs**
+- Thousands of dollars in unnecessary compute costs
 - Slow dashboard refresh times that frustrate business users
 - Complex maintenance overhead
 - Limited scalability as data grows
@@ -57,9 +46,7 @@ The stakes were high. Choose wrong, and you could end up with:
 
 My architecture connects Power BI to the Gold layer through Synapse Serverless SQL Pool, creating a cost-effective serving layer:
 
-![](https://miro.medium.com/v2/resize:fit:1400/1*Uf7wtPk_nYwbK2IaL2NktA.png)
-
-But why this architecture? Let me show you the analysis that led me here.
+![](https://miro.medium.com/v2/resize:fit:1400/1*Uf7wtPk_nYwbK2IaL2NktA.png) But why this architecture? Let me show you the analysis that led me here.
 
 ## The Critical Decision: Serverless vs Dedicated vs Databricks SQL
 
@@ -69,7 +56,7 @@ When evaluating compute options for Power BI integration, I analyzed three prima
 
 Serverless SQL Pool operates on a pay-per-query model where you only pay for the data scanned. This aligns perfectly with Power BI’s scheduled refresh pattern.
 
-**Technical Specifications:**
+Technical Specifications:
 
 - Pricing: $5 per TB of data processed
 - Concurrent executing requests: 15 (additional requests are queued)
@@ -79,7 +66,7 @@ Serverless SQL Pool operates on a pay-per-query model where you only pay for the
 - Automatic scaling with no configuration
 - Direct query on Delta, Parquet, CSV formats
 
-**Real Cost Calculation:** For my scenario of 4 daily refreshes scanning 100GB each:
+Real Cost Calculation: For my scenario of 4 daily refreshes scanning 100GB each:
 
 - Daily data processed: 400GB
 - Daily cost: 0.4 TB × $5 = $2
@@ -90,7 +77,7 @@ Serverless SQL Pool operates on a pay-per-query model where you only pay for the
 
 Dedicated SQL Pool provides reserved compute capacity with predictable performance characteristics.
 
-**Technical Specifications (West US 3 region):**
+Technical Specifications (West US 3 region):
 
 - DW100c: $1.20/hour, 4 concurrent queries
 - DW200c: $2.40/hour, 8 concurrent queries
@@ -105,13 +92,13 @@ Dedicated SQL Pool provides reserved compute capacity with predictable performan
 - Additional storage: $23/TB/month
 - Geo-Redundant Disaster Recovery: $0.06/GB/month
 
-**Reservation Options:**
+Reservation Options:
 
 1-year reserved: ~37% savings
 
 3-year reserved: ~65% savings
 
-**Real Cost Calculation:** For DW1000c (minimum recommended for production) in West US 3:
+Real Cost Calculation: For DW1000c (minimum recommended for production) in West US 3:
 
 - Hourly cost: $12.00
 - Daily cost (24 hours): $288.00
@@ -131,14 +118,14 @@ Ref : [Azure Pricing Calculator](https://azure.microsoft.com/en-us/pricing/calcu
 
 Databricks SQL provides a middle ground with serverless compute but persistent cluster availability.
 
-**Technical Specifications:**
+Technical Specifications:
 
 - SQL Compute: $0.22–0.55 per DBU (varies by region)
 - Classic SQL Endpoint: 2XS (2 DBU/hr) to 4XL (512 DBU/hr)
 - Serverless SQL: Automatic scaling, $0.70 per DBU-hour
 - Concurrency: Depends on cluster size
 
-**Real Cost Calculation:** For Medium cluster (16 DBU/hour) in East US 2:
+Real Cost Calculation: For Medium cluster (16 DBU/hour) in East US 2:
 
 - Hourly cost: 16 × $0.22 = $3.52
 - Daily cost (8 hours): $28.16
@@ -153,13 +140,11 @@ Databricks SQL provides a middle ground with serverless compute but persistent c
 
 For my Power BI Import mode scenario with 400GB daily processing:
 
-***Approx.***
+*Approx.*
 
 - Serverless SQL Pool: $720/year
 - Dedicated SQL Pool: $130,637/year (181x more expensive)
-- Databricks SQL: $10,138/year (14x more expensive)
-
-Synapse Serverless SQL Pool provides a 99.4% cost reduction compared to Dedicated SQL Pool for this workload pattern.
+- Databricks SQL: $10,138/year (14x more expensive) Synapse Serverless SQL Pool provides a 99.4% cost reduction compared to Dedicated SQL Pool for this workload pattern.
 
 ## Implementation: Building the Integration
 
@@ -197,16 +182,16 @@ Each view maps to a Delta table location in the data lake. When Power BI queries
 
 In Power BI, I establish connection to Synapse Serverless SQL Pool using the standard SQL Server connector. The critical decisions at this stage:
 
-***Critical Consideration for DirectQuery:** Serverless SQL Pool shines when you have a compact Power BI model using Import mode with incremental refresh. The key to success is designing your model to be as compact and efficient as possible. However, for large, complex DirectQuery models with heavy user interaction, Serverless SQL Pool may struggle due to the lack of result caching and concurrent query limitations. In these scenarios, the performance degradation can outweigh the cost benefits, making **Dedicated SQL Pool or Databricks SQL Warehouse **better choices despite their higher costs.*
+*Critical Consideration for DirectQuery: Serverless SQL Pool shines when you have a compact Power BI model using Import mode with incremental refresh. The key to success is designing your model to be as compact and efficient as possible. However, for large, complex DirectQuery models with heavy user interaction, Serverless SQL Pool may struggle due to the lack of result caching and concurrent query limitations. In these scenarios, the performance degradation can outweigh the cost benefits, making Dedicated SQL Pool or Databricks SQL Warehouse better choices despite their higher costs.*
 
-**Import vs DirectQuery Mode:** I chose Import mode because:
+Import vs DirectQuery Mode: I chose Import mode because:
 
 - My data freshness requirement is 4 times daily, not real-time
 - Import mode provides better end-user query performance
 - Cost is predictable and limited to refresh times
 - Complex DAX calculations perform better on imported data
 
-**Incremental Refresh Strategy:** For large fact tables, I implement incremental refresh:
+Incremental Refresh Strategy: For large fact tables, I implement incremental refresh:
 
 - Historical data (older than 1 year): Refreshed monthly
 - Recent data (last 12 months): Refreshed daily
@@ -226,13 +211,13 @@ This strategy reduces daily data scan from potentially terabytes to just gigabyt
 
 Through extensive testing, I’ve identified several critical optimizations:
 
-**Delta File Optimization:** Regular OPTIMIZE commands in Databricks compact small files into larger ones, reducing the number of files Synapse needs to scan. This can reduce query time by 50–80%.
+Delta File Optimization: Regular OPTIMIZE commands in Databricks compact small files into larger ones, reducing the number of files Synapse needs to scan. This can reduce query time by 50–80%.
 
-**Z-Ordering Strategy:** I apply Z-ORDER on commonly filtered columns (typically date and key dimensions). This co-locates related data, dramatically improving query performance.
+Z-Ordering Strategy: I apply Z-ORDER on commonly filtered columns (typically date and key dimensions). This co-locates related data, dramatically improving query performance.
 
-**Partition Elimination:** By partitioning fact tables by year/month and ensuring Power BI filters include date ranges, I reduce data scanned by 90% or more.
+Partition Elimination: By partitioning fact tables by year/month and ensuring Power BI filters include date ranges, I reduce data scanned by 90% or more.
 
-**Column Pruning:** Views only select required columns. Since Delta uses columnar storage, selecting fewer columns directly reduces data scanned and cost.
+Column Pruning: Views only select required columns. Since Delta uses columnar storage, selecting fewer columns directly reduces data scanned and cost.
 
 ## Critical Lessons Learned
 
@@ -275,10 +260,10 @@ I’ll cover this migration in detail in my next article, including lessons lear
 
 ## Key Takeaways
 
-1. **Synapse Serverless SQL Pool offers exceptional value** for Power BI Import mode scenarios, providing enterprise capabilities at a fraction of the cost of traditional solutions.
-2. **Architecture decisions should be data-driven**: My analysis showed 99.4% cost savings by choosing Serverless over Dedicated SQL Pool for this specific workload pattern.
-3. **Delta Lake format is essential**: The combination of Delta’s optimization features with Serverless SQL Pool’s pay-per-query model creates a powerful and cost-effective solution.
-4. **Optimization compounds savings**: Each optimization technique (partitioning, Z-Ordering, file compaction) directly translates to cost reduction in a pay-per-query model.
+1. Synapse Serverless SQL Pool offers exceptional value for Power BI Import mode scenarios, providing enterprise capabilities at a fraction of the cost of traditional solutions.
+2. Architecture decisions should be data-driven: My analysis showed 99.4% cost savings by choosing Serverless over Dedicated SQL Pool for this specific workload pattern.
+3. Delta Lake format is essential: The combination of Delta’s optimization features with Serverless SQL Pool’s pay-per-query model creates a powerful and cost-effective solution.
+4. Optimization compounds savings: Each optimization technique (partitioning, Z-Ordering, file compaction) directly translates to cost reduction in a pay-per-query model.
 
 *Building production-ready data platforms is a journey of continuous learning and optimization. If you found value in this series, I’d love to hear about your own experiences. Have you tackled similar challenges? Found creative solutions to cost optimization? Hit unexpected roadblocks?*
 

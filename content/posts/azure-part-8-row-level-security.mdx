@@ -16,44 +16,31 @@ draft: false
 
 *Securing your analytics layer with dynamic, territory-based access control*
 
-Welcome to Part 8 of my comprehensive series on building production-ready data pipelines with Azure. After establishing our complete data platform and Power BI integration, today I’m addressing a critical requirement for enterprise analytics: **Row-Level Security **in Power BI.
+Welcome to Part 8 of my comprehensive series on building production-ready data pipelines with Azure. After establishing our complete data platform and Power BI integration, today I’m addressing a critical requirement for enterprise analytics: Row-Level Security in Power BI.
 
 ## The Journey So Far
 
 Let me quickly recap our architectural evolution:
 
-[**Part 1: Complete Guide to Medallion Architecture](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-complete-guide-to-medallion-architecture-09d73f0e62dd)**
-I established the foundation with Azure Data Factory, ADLS Gen2, and the medallion architecture pattern.
+- [Part 1: Complete Guide to Medallion Architecture](/blog/azure-part-1-medallion-architecture) – Foundation with Azure Data Factory, ADLS Gen2, and the medallion architecture pattern.
+- [Part 2: Unity Catalog Integration](/blog/azure-part-2-unity-catalog) – Unified governance and lineage with Unity Catalog.
+- [Part 3: Advanced Unity Catalog Table Management](/blog/azure-part-3-advanced-unity) – External tables, managed tables, and data quality constraints.
+- [Part 4: From Mount Points to Unity Catalog](/blog/azure-part-4-mount-to-uc) – Migration from mount points to Unity Catalog volumes.
+- [Part 5: Implementing CI/CD](/blog/azure-part-5-ci-cd) – Automated Azure DevOps pipelines for consistent, reliable releases.
+- [Part 6: Gold Layer Implementation](/blog/azure-part-6-gold-layer) – Sophisticated Gold layer processing with dependency management and flexible scheduling.
+- [Part 7: Power BI Integration with Synapse](/blog/azure-part-7-power-bi-synapse) – DirectQuery integration that reduced costs by 97.6%.
 
-[**Part 2: Unity Catalog Integration](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-2-unity-catalog-integration-689b52cb71b2)**
-I enhanced the platform with Unity Catalog for unified governance and data lineage tracking.
-
-[**Part 3: Advanced Unity Catalog Table Management](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-3-advanced-unity-catalog-table-d456edbd7f47)**
-I explored external tables, managed tables, and data quality constraints.
-
-[**Part 4: From Mount Points to Unity Catalog](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-4-from-mount-points-to-unity-catalog-696f8dd634a1)**
-I modernized data access patterns by migrating from mount points to Unity Catalog volumes.
-
-[**Part 5: Implementing CI/CD](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-5-implementing-ci-cd-for-azure-data-fb19c679311b)**
-I automated deployments with Azure DevOps pipelines for consistent, reliable releases.
-
-[**Part 6: Gold Layer Implementation**
-](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-6-implementing-the-gold-layer-with-c10b141dd7f3)I built sophisticated Gold layer processing with dependency management and flexible scheduling.
-
-[**Part 7: Power BI Integration with Synapse**
-](https://medium.com/@kocyigityasar/building-a-production-ready-data-pipeline-with-azure-part-7-power-bi-integration-with-synapse-2346fdaf6d7f)I achieved 97.6% cost reduction by integrating Power BI through Synapse Serverless SQL Pool.
-
-Today, I’m completing our enterprise analytics platform by implementing **Row-Level Security** - ensuring users only see the data they’re authorized to access.
+Today, I’m completing our enterprise analytics platform by implementing Row-Level Security - ensuring users only see the data they’re authorized to access.
 
 ## The Business Challenge
 
 In any enterprise analytics deployment, data access control is paramount. Consider these common scenarios:
 
-- **Territory Managers** should only see sales data for their assigned regions
-- **Regional Directors** need visibility across multiple territories in their region
-- **C-Suite Executives** require global access to all data
-- **External Partners** must be restricted to specific customer segments
-- **Compliance Teams** need filtered views based on regulatory requirements
+- Territory Managers should only see sales data for their assigned regions
+- Regional Directors need visibility across multiple territories in their region
+- C-Suite Executives require global access to all data
+- External Partners must be restricted to specific customer segments
+- Compliance Teams need filtered views based on regulatory requirements
 
 Without proper security implementation, organizations typically resort to:
 
@@ -68,11 +55,11 @@ These approaches lead to maintenance nightmares, inconsistent metrics, and secur
 
 I’ll implement a comprehensive RLS solution that provides:
 
-- **Dynamic filtering** based on user identity
-- **Single source of truth** with one report serving all users
-- **Seamless Azure AD integration** for authentication
-- **Scalability** to thousands of users without performance degradation
-- **Maintainability** through centralized security management
+- Dynamic filtering based on user identity
+- Single source of truth with one report serving all users
+- Seamless Azure AD integration for authentication
+- Scalability to thousands of users without performance degradation
+- Maintainability through centralized security management
 
 ## Architecture Overview
 
@@ -152,8 +139,7 @@ user_security_data = [
      True, "2024-01-01", None, datetime.now(), "system"),
 ]
 # Create and process the DataFrame
-user_security_df = spark.createDataFrame(user_security_data, schema=user_security_schema)
-user_security_df = user_security_df.withColumn("valid_from", to_date(col("valid_from")))
+user_security_df = spark.createDataFrame(user_security_data, schema=user_security_schema) user_security_df = user_security_df.withColumn("valid_from", to_date(col("valid_from")))
 # COMMAND ----------
 # MAGIC %md
 # MAGIC ### Expanding for Power BI Consumption
@@ -165,29 +151,24 @@ user_security_df = user_security_df.withColumn("valid_from", to_date(col("valid_
 # COMMAND ----------
 # Define all available territories
 # This should match your dim_territory table
-all_territories = spark.range(1, 11).select(col("id").alias("territory_key")).collect()
-territory_list = [row.territory_key for row in all_territories]
+all_territories = spark.range(1, 11).select(col("id").alias("territory_key")).collect() territory_list = [row.territory_key for row in all_territories]
 # Separate specific and all-access users
 specific_territory_users = user_security_df.filter(
     (col("territory_key") != -1) & 
     (col("is_active") == True)
-)
-all_territory_users = user_security_df.filter(
+) all_territory_users = user_security_df.filter(
     (col("territory_key") == -1) & 
     (col("is_active") == True)
 )
 # Expand -1 to all territories
 expanded_frames = []
 for territory in territory_list:
-    expanded = all_territory_users.withColumn("territory_key", lit(territory))
-    expanded_frames.append(expanded)
+    expanded = all_territory_users.withColumn("territory_key", lit(territory)) expanded_frames.append(expanded)
 # Combine all access patterns
 if expanded_frames:
     all_expanded = expanded_frames[0]
     for df in expanded_frames[1:]:
-        all_expanded = all_expanded.union(df)
-    final_access_df = specific_territory_users.union(all_expanded)
-else:
+        all_expanded = all_expanded.union(df) final_access_df = specific_territory_users.union(all_expanded) else:
     final_access_df = specific_territory_users
 # Create the final access table
 user_territory_access = final_access_df.select(
@@ -203,13 +184,10 @@ user_territory_access.write \
     .mode("overwrite") \
     .option("overwriteSchema", "true") \
     .format("delta") \
-    .save(output_path)
-print(f"✅ Security table written to: {output_path}")
+    .save(output_path) print(f"✅ Security table written to: {output_path}")
 ```
 
-![](https://miro.medium.com/v2/resize:fit:1400/1*If0gGLLCUrvYLlxk0TP1yQ.png)
-
-**Using Synapse Serverless SQL Pool Engine for Power Bi Import Model :**
+![](https://miro.medium.com/v2/resize:fit:1400/1*If0gGLLCUrvYLlxk0TP1yQ.png) Using Synapse Serverless SQL Pool Engine for Power Bi Import Model :
 
 ![](https://miro.medium.com/v2/resize:fit:1400/1*wEh8CUk3okqjYrqdVfb-5g.png)
 
@@ -258,14 +236,12 @@ Now I’ll expose the security table through Synapse Serverless SQL Pool:
 
 ```sql
 -- Create the database and schema if not exists
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'GoldLayer')
-    CREATE DATABASE GoldLayer;
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'GoldLayer') CREATE DATABASE GoldLayer;
 GO
 
 USE GoldLayer;
 GO
-IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'star_schema')
-    EXEC('CREATE SCHEMA star_schema');
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'star_schema') EXEC('CREATE SCHEMA star_schema');
 GO
 -- Create the user territory access view
 CREATE OR ALTER VIEW star_schema.user_territory_access AS
@@ -296,7 +272,7 @@ This is where most RLS implementations fail. The relationship configuration must
 
 ## Import the Security Table
 
-1. **Get Data** → Azure Synapse Analytics
+1. Get Data → Azure Synapse Analytics
 2. Server: `your-synapse.sql.azuresynapse.net`
 3. Database: `GoldLayer`
 4. Data Connectivity mode: Import
@@ -304,21 +280,21 @@ This is where most RLS implementations fail. The relationship configuration must
 
 ## Configure the Relationship (Most Critical Step!)
 
-1. Go to **Model View**
+1. Go to Model View
 2. Create relationship:
 
 - From: `user_territory_access[territory_key]`
 - To: `dim_territory[territory_key]`
-- Cardinality: **Many-to-One (*:1)**
-- Cross-filter direction: **Single**
-- **Make this relationship active: Yes**
-- **Apply security filter in both directions: Yes** ← **CRITICAL!**
+- Cardinality: Many-to-One (*:1)
+- Cross-filter direction: Single
+- Make this relationship active: Yes
+- Apply security filter in both directions: Yes ← CRITICAL!
 
 The “Apply security filter in both directions” setting is what makes RLS work properly. Without it, the security filter won’t propagate through to your fact tables.
 
 ## Create the RLS Role
 
-1. **Modeling** tab → **Manage Roles**
+1. Modeling tab → Manage Roles
 2. Create new role: “Territory Security”
 3. Select `user_territory_access` table
 4. Add DAX filter:
@@ -333,20 +309,16 @@ The “Apply security filter in both directions” setting is what makes RLS wor
 
 ## Test in Power BI Desktop
 
-1. **Modeling** → **View as**
+1. Modeling → View as
 2. Select “Territory Security” role
 3. Other user: `territory.manager1@company.com`
 4. Verify only Territory 1 data is visible
 
 ![](https://miro.medium.com/v2/resize:fit:1400/1*InwcLTsRs9b8vTCcp9LfLg.png)
 
-![](https://miro.medium.com/v2/resize:fit:1400/1*SATmYXDx212DoMNfmk-PTg.png)
+![](https://miro.medium.com/v2/resize:fit:1400/1*SATmYXDx212DoMNfmk-PTg.png) BEFORE RLS FILTERED
 
-**BEFORE RLS FILTERED**
-
-![](https://miro.medium.com/v2/resize:fit:1400/1*RHnfs0UtUTLV-3zCIMxS7A.png)
-
-**AFTER RLS FILTERED**
+![](https://miro.medium.com/v2/resize:fit:1400/1*RHnfs0UtUTLV-3zCIMxS7A.png) AFTER RLS FILTERED
 
 ![](https://miro.medium.com/v2/resize:fit:1400/1*oj8xT4tFj29WscXx7GxZBg.png)
 
@@ -370,7 +342,7 @@ The RLS filter flows through the model like this:
 
 1. Publish report to Power BI Service
 2. Navigate to dataset settings
-3. Go to **Security** tab
+3. Go to Security tab
 4. On “Territory Security” role, add members:
 
 - Add individual users by email
@@ -430,42 +402,42 @@ audit_schema = StructType([
 
 ## Pitfall 1: RLS Not Working
 
-**Solution:** Check “Apply security filter in both directions” setting
+Solution: Check “Apply security filter in both directions” setting
 
 ## Pitfall 2: Users See No Data
 
-**Solution:** Verify email addresses match exactly (case-sensitive)
+Solution: Verify email addresses match exactly (case-sensitive)
 
 ## Pitfall 3: Performance Degradation
 
-**Solution:** Implement aggregation tables and optimize relationships
+Solution: Implement aggregation tables and optimize relationships
 
 ## Pitfall 4: Maintenance Overhead
 
-**Solution:** Automate security table updates from source systems
+Solution: Automate security table updates from source systems
 
 ## Pitfall 5: Testing Complexity
 
-**Solution:** Create test users for each access pattern
+Solution: Create test users for each access pattern
 
 ## Best Practices
 
-1. **Start Simple:** Begin with basic territory filtering, then add complexity
-2. **Document Everything:** Maintain clear documentation of who has access to what
-3. **Regular Audits:** Schedule monthly access reviews
-4. **Performance Testing:** Test with maximum expected concurrent users
-5. **Backup Plans:** Have manual override procedures for emergencies
-6. **Change Management:** Implement approval workflows for access changes
-7. **Training:** Ensure report developers understand RLS implications
+1. Start Simple: Begin with basic territory filtering, then add complexity
+2. Document Everything: Maintain clear documentation of who has access to what
+3. Regular Audits: Schedule monthly access reviews
+4. Performance Testing: Test with maximum expected concurrent users
+5. Backup Plans: Have manual override procedures for emergencies
+6. Change Management: Implement approval workflows for access changes
+7. Training: Ensure report developers understand RLS implications
 
 ## Conclusion
 
 Row-Level Security transforms Power BI from a reporting tool into an enterprise analytics platform. By implementing dynamic, maintainable security at the data model level, I’ve ensured that:
 
-- **Each user sees only their authorized data** without creating multiple reports
-- **Security is centrally managed** and easily auditable
-- **Performance remains optimal** even with thousands of users
-- **Maintenance is simplified** through automated processes
+- Each user sees only their authorized data without creating multiple reports
+- Security is centrally managed and easily auditable
+- Performance remains optimal even with thousands of users
+- Maintenance is simplified through automated processes
 
 The key to success lies in:
 
