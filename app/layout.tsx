@@ -76,7 +76,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${plexMono.variable} ${dancingScript.variable}`}
+      className={`${inter.variable} ${plexMono.variable} ${dancingScript.variable} dark`}
       suppressHydrationWarning
     >
       <body className="bg-background text-foreground antialiased">

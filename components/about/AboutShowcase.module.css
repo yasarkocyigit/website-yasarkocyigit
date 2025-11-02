@@ -1,16 +1,21 @@
 .root {
   background: var(--bg);
   color: var(--fg);
+  position: relative;
+  width: 100%;
+}
+
+.root * {
+  box-sizing: border-box;
 }
 
 .hero,
-.about,
-.services,
-.outro {
+.outro,
+.about {
   position: relative;
   width: 100%;
   height: 100svh;
-  padding: clamp(1.75rem, 4vw, 3rem);
+  padding: 2rem;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -18,12 +23,14 @@
 }
 
 .hero {
-  padding-top: calc(clamp(1.75rem, 4vw, 3rem) + var(--nav-height) + env(safe-area-inset-top, 0px));
+  padding-top: calc(2rem + var(--nav-height) + env(safe-area-inset-top, 0px));
 }
 
-.heroImg {
-  width: clamp(220px, 26vw, 340px);
-  aspect-ratio: 5 / 7;
+.heroImg,
+.outroImg {
+  width: 300px;
+  aspect-ratio: 5/7;
+  overflow: hidden;
 }
 
 .heroImg img {
@@ -36,13 +43,6 @@
   box-shadow: 0 40px 65px -48px rgba(15, 23, 42, 0.55);
 }
 
-.outroImg {
-  width: clamp(200px, 28vw, 360px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .outroImg img {
   width: 100%;
   height: auto;
@@ -50,23 +50,30 @@
   display: block;
 }
 
-.about {
-  text-align: center;
-}
-
 .services {
+  position: relative;
+  width: 100vw;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  height: 100svh;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
 }
 
 .servicesHeader {
   position: relative;
-  width: 100%;
-  padding: 0 clamp(1.5rem, 4vw, 3rem);
+  width: 100vw;
+  padding: 0 2rem;
+  background: var(--bg);
   will-change: transform;
 }
 
+.servicesImage,
 .servicesHeader img {
   width: 100%;
   height: auto;
@@ -76,11 +83,11 @@
 
 .servicesHeader:nth-child(1),
 .servicesHeader:nth-child(3) {
-  transform: translateX(100%) translateY(0);
+  transform: translateX(100%) translateY(0%);
 }
 
 .servicesHeader:nth-child(2) {
-  transform: translateX(-100%) translateY(0);
+  transform: translateX(-100%) translateY(0%);
   z-index: 2;
 }
 
@@ -89,19 +96,19 @@
   width: 100%;
   height: 100%;
   margin-top: 155svh;
-  padding: clamp(1.75rem, 4vw, 3rem) clamp(1.75rem, 5vw, 3.5rem) clamp(8rem, 18vw, 24rem);
+  padding: 2rem 2rem 25svh 2rem;
   text-align: center;
 }
 
 .animateText {
   position: relative;
-  width: min(900px, 60%);
+  width: 60%;
   margin: 0 auto;
   color: color-mix(in srgb, var(--muted) 80%, transparent);
-  font-size: clamp(2rem, 5vw, 3.8rem);
-  font-weight: 800;
-  letter-spacing: -0.08em;
-  line-height: 1.08;
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: -0.15rem;
+  line-height: 1.125;
   --clip-value: 100%;
 }
 
@@ -110,6 +117,8 @@
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   color: var(--fg);
   clip-path: inset(0 0 var(--clip-value) 0);
   will-change: clip-path;
@@ -118,19 +127,7 @@
 @media (max-width: 1000px) {
   .animateText {
     width: 100%;
-    font-size: clamp(1.65rem, 6vw, 2.4rem);
-  }
-
-  .heroImg {
-    width: clamp(200px, 55vw, 260px);
-  }
-
-  .outroImg {
-    width: clamp(180px, 50vw, 260px);
-  }
-
-  .servicesCopy {
-    margin-top: 120svh;
-    padding-bottom: clamp(10rem, 28vw, 18rem);
+    font-size: 2rem;
+    letter-spacing: -0.05rem;
   }
 }

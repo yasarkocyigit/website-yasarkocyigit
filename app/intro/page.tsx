@@ -48,28 +48,6 @@ export default function IntroPage() {
     navigate("/home");
   }, [navigate]);
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeydown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        handleActivate();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [handleActivate]);
-
   return (
     <main
       className={`${inter.variable} ${plexMono.variable} relative min-h-screen w-full overflow-hidden bg-background text-foreground`}

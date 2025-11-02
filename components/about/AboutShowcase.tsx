@@ -26,87 +26,85 @@ export default function AboutShowcase() {
     const servicesSection = servicesRef.current;
     if (!container || !servicesSection) return;
 
-    const lenis = new Lenis();
+    const lenis = new Lenis({
+      wrapper: window,
+      content: document.documentElement,
+    });
     lenis.on("scroll", ScrollTrigger.update);
 
-    const ticker = (time: number) => {
+    gsap.ticker.add((time) => {
       lenis.raf(time * 1000);
-    };
-
-    gsap.ticker.add(ticker);
+    });
     gsap.ticker.lagSmoothing(0);
 
-    const triggers: ScrollTrigger[] = [];
-
-    const textBlocks = Array.from(container.querySelectorAll<HTMLElement>(".animate-text"));
-
-    textBlocks.forEach((block) => {
-      block.setAttribute("data-text", block.textContent?.trim() ?? "");
-      triggers.push(
-        ScrollTrigger.create({
-          trigger: block,
-          start: "top 50%",
-          end: "bottom 50%",
-          scrub: true,
-          onUpdate: (self) => {
-            const clipValue = Math.max(0, 100 - self.progress * 100);
-            block.style.setProperty("--clip-value", `${clipValue}%`);
-          },
-        })
-      );
+    // Ensure ScrollTrigger uses window as scroller
+    ScrollTrigger.defaults({
+      scroller: window,
     });
 
-    const headers = Array.from(servicesSection.querySelectorAll<HTMLElement>(".services-header"));
+    // Text reveal animations
+    container.querySelectorAll<HTMLElement>(".animate-text").forEach((textElement) => {
+      textElement.setAttribute("data-text", textElement.textContent?.trim() ?? "");
 
-    if (headers.length === 3) {
-      const [first, middle, last] = headers;
+      ScrollTrigger.create({
+        trigger: textElement,
+        start: "top 50%",
+        end: "bottom 50%",
+        scrub: 1,
+        onUpdate: (self) => {
+          const clipValue = Math.max(0, 100 - self.progress * 100);
+          textElement.style.setProperty("--clip-value", `${clipValue}%`);
+        },
+      });
+    });
 
-      triggers.push(
-        ScrollTrigger.create({
-          trigger: servicesSection,
-          start: "top bottom",
-          end: "top top",
-          scrub: 1,
-          onUpdate: (self) => {
-            gsap.set(first, { x: `${100 - self.progress * 100}%` });
-            gsap.set(middle, { x: `${-100 + self.progress * 100}%` });
-            gsap.set(last, { x: `${100 - self.progress * 100}%` });
-          },
-        })
-      );
+    // Services slide-in animation
+    ScrollTrigger.create({
+      trigger: servicesSection,
+      start: "top bottom",
+      end: "top top",
+      scrub: 1,
+      onUpdate: (self) => {
+        const headers = servicesSection.querySelectorAll<HTMLElement>(".services-header");
+        gsap.set(headers[0], { x: `${100 - self.progress * 100}%` });
+        gsap.set(headers[1], { x: `${-100 + self.progress * 100}%` });
+        gsap.set(headers[2], { x: `${100 - self.progress * 100}%` });
+      },
+    });
 
-      triggers.push(
-        ScrollTrigger.create({
-          trigger: servicesSection,
-          start: "top top",
-          end: `+=${window.innerHeight * 2}`,
-          pin: true,
-          scrub: 1,
-          pinSpacing: false,
-          onUpdate: (self) => {
-            if (self.progress <= 0.5) {
-              const yProgress = self.progress / 0.5;
-              gsap.set(first, { y: `${yProgress * 100}%` });
-              gsap.set(last, { y: `${yProgress * -100}%` });
-            } else {
-              gsap.set(first, { y: "100%" });
-              gsap.set(last, { y: "-100%" });
+    // Services vertical movement and scale animation
+    ScrollTrigger.create({
+      trigger: servicesSection,
+      start: "top top",
+      end: `+=${window.innerHeight * 2}`,
+      pin: true,
+      scrub: 1,
+      pinSpacing: false,
+      onUpdate: (self) => {
+        const headers = servicesSection.querySelectorAll<HTMLElement>(".services-header");
 
-              const scaleProgress = (self.progress - 0.5) / 0.5;
-              const minScale = window.innerWidth <= 1000 ? 0.3 : 0.1;
-              const scale = 1 - scaleProgress * (1 - minScale);
-              headers.forEach((header) => gsap.set(header, { scale }));
-            }
-          },
-        })
-      );
-    }
+        if (self.progress <= 0.5) {
+          const yProgress = self.progress / 0.5;
+          gsap.set(headers[0], { y: `${yProgress * 100}%` });
+          gsap.set(headers[2], { y: `${yProgress * -100}%` });
+        } else {
+          gsap.set(headers[0], { y: "100%" });
+          gsap.set(headers[2], { y: "-100%" });
 
-    requestAnimationFrame(() => ScrollTrigger.refresh());
+          const scaleProgress = (self.progress - 0.5) / 0.5;
+          const minScale = window.innerWidth <= 1000 ? 0.3 : 0.1;
+          const scale = 1 - scaleProgress * (1 - minScale);
+
+          headers.forEach((header) => gsap.set(header, { scale }));
+        }
+      },
+    });
 
     return () => {
-      triggers.forEach((trigger) => trigger.kill());
-      gsap.ticker.remove(ticker);
+      ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
+      gsap.ticker.remove((time) => {
+        lenis.raf(time * 1000);
+      });
       lenis.destroy();
     };
   }, []);
@@ -144,7 +142,7 @@ export default function AboutShowcase() {
               width={1600}
               height={320}
               priority={index === 1}
-              className="h-full w-full object-contain invert dark:invert-0"
+              className={styles.servicesImage}
             />
           </div>
         ))}

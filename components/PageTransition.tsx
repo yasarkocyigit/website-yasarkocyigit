@@ -33,9 +33,16 @@ export default function PageTransition({
   const blocksRef = useRef<HTMLDivElement[]>([]);
   const isTransitioning = useRef(false);
   const lastRevealedPathRef = useRef(pathname);
+  const currentAnimationRef = useRef<gsap.core.Tween | null>(null);
 
   const revealPage = useCallback(() => {
     if (blocksRef.current.length === 0) return;
+
+    // Prevent overlapping animations
+    if (currentAnimationRef.current) {
+      currentAnimationRef.current.kill();
+      currentAnimationRef.current = null;
+    }
 
     const rootStyles = getComputedStyle(document.documentElement);
     const bgValue = rootStyles.getPropertyValue("--bg").trim() || "transparent";
@@ -49,7 +56,7 @@ export default function PageTransition({
 
     gsap.set(blocksRef.current, { scaleX: 1, transformOrigin: "right" });
 
-    gsap.to(blocksRef.current, {
+    currentAnimationRef.current = gsap.to(blocksRef.current, {
       scaleX: 0,
       duration: 0.45,
       stagger: 0.024,
@@ -57,6 +64,7 @@ export default function PageTransition({
       transformOrigin: "right",
       onComplete: () => {
         isTransitioning.current = false;
+        currentAnimationRef.current = null;
         if (overlayRef.current) {
           overlayRef.current.style.pointerEvents = "none";
           overlayRef.current.style.background = "transparent";
@@ -72,6 +80,12 @@ export default function PageTransition({
     (pushHref: string) => {
       if (!overlayRef.current) return;
 
+      // Prevent overlapping animations
+      if (currentAnimationRef.current) {
+        currentAnimationRef.current.kill();
+        currentAnimationRef.current = null;
+      }
+
       overlayRef.current.style.pointerEvents = "auto";
 
       const rootStyles = getComputedStyle(document.documentElement);
@@ -83,13 +97,14 @@ export default function PageTransition({
       }
 
       // Close transition only
-      gsap.to(blocksRef.current, {
+      currentAnimationRef.current = gsap.to(blocksRef.current, {
         scaleX: 1,
         duration: 0.45,
         stagger: 0.024,
         transformOrigin: "left",
         ease: "power2.out",
         onComplete: () => {
+          currentAnimationRef.current = null;
           if (process.env.NODE_ENV === "development") {
             console.log("[PageTransition] cover complete, pushing", pushHref);
           }
@@ -105,7 +120,12 @@ export default function PageTransition({
 
   const handleRouteChange = useCallback(
     (pushHref: string) => {
-      if (isTransitioning.current) return;
+      if (isTransitioning.current) {
+        if (process.env.NODE_ENV === "development") {
+          console.log("[PageTransition] BLOCKED - already transitioning", pushHref);
+        }
+        return;
+      }
       isTransitioning.current = true;
       if (process.env.NODE_ENV === "development") {
         console.log("[PageTransition] handleRouteChange ->", pushHref);
@@ -197,9 +217,10 @@ export default function PageTransition({
   }, [handleAnchorClick, pathname]);
 
   useEffect(() => {
+    // Skip if pathname hasn't changed
     if (lastRevealedPathRef.current === pathname) {
       if (process.env.NODE_ENV === "development") {
-        console.log("[PageTransition] skip reveal", pathname);
+        console.log("[PageTransition] skip reveal - same pathname", pathname);
       }
       return;
     }
