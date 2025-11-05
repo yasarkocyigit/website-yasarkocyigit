@@ -81,6 +81,14 @@
   display: block;
 }
 
+.servicesImage {
+  filter: invert(1);
+}
+
+:global(.dark) .servicesImage {
+  filter: none;
+}
+
 .servicesHeader:nth-child(1),
 .servicesHeader:nth-child(3) {
   transform: translateX(100%) translateY(0%);
