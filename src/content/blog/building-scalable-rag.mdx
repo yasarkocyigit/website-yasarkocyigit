@@ -1,0 +1,32 @@
+---
+title: "Building Scalable RAG Systems with Vector Databases"
+description: "A deep dive into optimizing Retrieval Augmented Generation pipelines for enterprise scale."
+date: "2024-10-15"
+tags: ["AI", "RAG", "VectorDB", "Engineering"]
+published: true
+---
+
+# Building Scalable RAG Systems
+
+Retrieval Augmented Generation (RAG) is becoming the standard for grounding LLMs in proprietary data. However, scaling these systems presents unique challenges.
+
+## The Challenge
+
+When moving from a prototype with 100 documents to a production system with 10 million, latency and retrieval quality often degrade.
+
+### Key Optimization Strategies
+
+1. **Hybrid Search**: Combining dense vector search with sparse keyword search (BM25) often yields better results than either alone.
+2. **Re-ranking**: Using a cross-encoder to re-rank the top K results can significantly improve precision.
+3. **Metadata Filtering**: Efficiently filtering chunks based on metadata before vector search.
+
+```python
+def hybrid_search(query, k=10):
+    dense_results = vector_db.search(query, k=k)
+    sparse_results = keyword_db.search(query, k=k)
+    return merge_and_rank(dense_results, sparse_results)
+```
+
+## Conclusion
+
+Scaling RAG requires a multi-layered approach to retrieval.

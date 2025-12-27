@@ -1,0 +1,30 @@
+---
+title: "Large Scale Knowledge Graph Construction"
+description: "Building a knowledge graph from unstructured legal documents using NLP and GraphDBs."
+date: "2024-06-15"
+tags: ["AI", "NLP", "Neo4j", "Python"]
+published: true
+---
+
+# Large Scale Knowledge Graph
+
+**Role**: AI Engineer  
+**Stack**: Python, Spacy, Neo4j, Transformers  
+
+## Context
+A legal tech firm wanted to uncover hidden relationships between entities in millions of court documents.
+
+## Implementation
+
+### 1. Entity Extraction (NER)
+We fine-tuned a RoBERTa model on legal texts to extract Persons, Organizations, and Laws.
+
+### 2. Relation Extraction
+Used a dependency-parsing approach combined with a classification model to determine relationship types (e.g., "SUED_BY", "OWNED_BY").
+
+### 3. Graph Modeling
+Modeled in Neo4j. Used standard property graph conventions.
+
+## Lessons Learned
+- **Entity Resolution** is harder than extraction. We implemented a custom clustering algorithm to merge "Apple Inc." and "Apple".
+- **Visualisation** at scale requires WebGL. Node-link diagrams clutter easily.

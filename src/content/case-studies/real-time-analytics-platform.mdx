@@ -1,0 +1,42 @@
+---
+title: "Enterprise Real-Time Analytics Platform"
+description: "Designing a low-latency analytics platform for a fintech unicorn handling 50k TPS."
+date: "2024-03-20"
+tags: ["Architecture", "Kafka", "Flink", "ClickHouse"]
+published: true
+---
+
+# Enterprise Real-Time Analytics Platform
+
+**Role**: Lead Data Engineer  
+**Stack**: Kafka, Flink, ClickHouse, AWS  
+**Timeline**: 6 months
+
+## Problem
+The client needed to visualize transaction metrics in real-time to detect fraud and operational anomalies. The existing batch system had a 4-hour delay.
+
+## Requirements
+- < 1 second end-to-end latency
+- 50,000 transactions per second peak
+- 99.99% availability
+
+## Architecture
+
+We chose a Kappa Architecture approach:
+
+1. **Ingestion**: CDC from PostgreSQL to Kafka (Debezium).
+2. **Processing**: Apache Flink for continuous aggregation (tumbling windows).
+3. **Serving**: ClickHouse for sub-second analytical queries.
+
+| Component | Technology | Rationale |
+|-----------|------------|-----------|
+| Bus | Kafka | Durability, throughput |
+| Stream Proc | Flink | State management, exactly-once |
+| OLAP | ClickHouse | Fast aggregations on large datasets |
+
+## Challenges (Tradeoffs)
+Handling late-arriving data in Flink was tricky. We implemented a side-output mechanism to re-process late events rather than waiting indefinitely.
+
+## Results
+- **Latency**: Reduced from 4 hours to 800ms.
+- **Cost**: Optimized ClickHouse storage reduced distinct metric storage costs by 40%.

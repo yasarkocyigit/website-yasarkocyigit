@@ -1,0 +1,159 @@
+---
+title: "Serverless SQL Pool to Fabric Migration"
+description: "Migrating from Synapse Serverless SQL to Microsoft Fabric Lakehouse. A comprehensive guide on automating Delta Table shortcuts and enabling the SQL Endpoint via PySpark."
+date: "2025-11-20"
+tags: ["Fabric", "Migration", "Lakehouse", "PySpark"]
+---
+
+## The Migration Challenge
+
+Organizations running on Azure Synapse Serverless SQL Pools often face a dilemma: while Serverless SQL is cost-effective for ad-hoc querying, it lacks the unified governance and performance optimizations of a true Lakehouse. Microsoft Fabric offers a compelling upgrade path, but the migration is not just "lift and shift"—it is an architectural evolution.
+
+In this project, we migrated a legacy Data Warehouse consisting of external tables over Delta Lake files into a native **Fabric Lakehouse**. The goal was to leverage the **Fabric SQL Endpoint** for seamless Power BI integration without moving the physical data.
+
+---
+
+## Architecture: The "Shortcut" Strategy
+
+Instead of physically copying petabytes of data, we utilized **OneLake Shortcuts**. Since our underlying data was already in Delta Parquet format (Bronze/Silver/Gold layers in ADLS Gen2), we could simply "point" Fabric to these locations.
+
+However, manually creating shortcuts for hundreds of tables is error-prone and tedious. We needed an automated approach.
+
+### The Problem with Serverless SQL
+*   **No Native Delta Features**: Managing time travel and optimization required complex separate processes.
+*   **Latency**: Metadata discovery over thousands of files introduced query latency.
+*   **Separation**: Power BI datasets required distinct refresh schedules, disconnecting them from the live data.
+
+### The Fabric Solution
+*   **OneLake**: A single logical data lake.
+*   **Shortcuts**: References to external ADLS data that appear as local tables.
+*   **SQL Endpoint**: Automatically generated T-SQL interface over the Lakehouse.
+
+---
+
+## Automation: The Migration Script
+
+We developed a PySpark notebook to automate the entire "crawling" and "linking" process. This script scans the ADLS paths and generates the necessary shortcuts in the Fabric Lakehouse.
+
+### Step 1: Automated Shortcut Creation (PySpark)
+We developed a PySpark notebook to automate the "linking" process. Unlike simple DDL, we used the **Fabric REST API** to programmatically create shortcuts from ADLS Gen2 to the Lakehouse, handling authentication and conflict resolution.
+
+```python
+import pandas as pd
+import sempy.fabric as fabric
+from sempy.fabric.exceptions import FabricHTTPException
+import requests
+from notebookutils import mssparkutils
+import time
+
+# 1. Setup Authentication & Headers
+url = 'https://api.fabric.microsoft.com/'
+access_token = mssparkutils.credentials.getToken(url)
+headers = {
+    "Authorization": f"Bearer {access_token}",
+    "Content-Type": "application/json"
+}
+
+# 2. Configuration
+workspaceId = '<workspace_id>'
+lakehouseid = '<lakehouse_id>'
+targetconnectionid = '<connection_id>'
+targetlocation = 'https://<storage_account>.dfs.core.windows.net/'
+
+# 3. Read Config Table for List of Shortcuts
+// Reads the active tables from a Config table in the Lakehouse
+ShortcutConf = spark.sql(f"""
+    SELECT ShortcutName, GoldPath 
+    FROM DELTA.`Tables/ShortcutConfig` SC 
+    WHERE isActive='1' AND LOWER(TRIM(StreamName))='<stream_name>'
+""").collect()
+
+# 4. Loop & Create Shortcuts
+shortcutConflictPolicy = "Abort"
+base_url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspaceId}/items/{lakehouseid}/shortcuts"
+
+for row in ShortcutConf:
+    shortcutname = row['ShortcutName']
+    subpath = f"nonpii/{row['GoldPath']}"
+    
+    # Check if exists
+    check_url = f"{base_url}/Tables/{shortcutname}"
+    if requests.get(check_url, headers=headers).status_code == 200:
+        print(f"Skipping existing: {shortcutname}")
+        continue
+
+    # Create Shortcut Payload
+    payload = {
+        "path": "Tables",
+        "name": shortcutname,
+        "target": {
+            "AdlsGen2": {
+                "location": targetlocation,
+                "subpath": subpath,
+                "connectionId": targetconnectionid
+            }
+        }
+    }
+
+    # Execute API Call
+    response = requests.post(f"{base_url}?shortcutConflictPolicy={shortcutConflictPolicy}", headers=headers, json=payload)
+    if response.status_code == 201:
+        print(f"Created: {shortcutname}")
+    else:
+        print(f"Failed {shortcutname}: {response.text}")
+```
+
+### Step 2: Dynamic SQL View Generation
+Once shortcuts are created, they exist as tables in the Lakehouse. To expose them consumption-ready (e.g. for Power BI) in a specific schema, we used a dynamic SQL script on the **SQL Endpoint**.
+
+This script highlights a "metadata-driven" approach to view creation, iterating through a list of definitions to ensure consistency.
+
+```sql
+-- Create schema if it doesn't exist
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = '<custom_schema>')
+    EXEC('CREATE SCHEMA <custom_schema>');
+
+-- 1. Create Metadata Table for Views
+CREATE TABLE #ViewScripts (ID INT, ViewName NVARCHAR(100), Script NVARCHAR(MAX));
+
+-- 2. Insert Dynamic View Definitions
+INSERT INTO #ViewScripts (ID, ViewName, Script)
+VALUES 
+(1, '<ViewName1>', N'
+    CREATE OR ALTER VIEW <custom_schema>.<ViewName1> AS
+    SELECT CO.<column_1>, CO.<column_2>, CO.<column_3>, CO.<column_4>
+    FROM [<Lakehouse_Name>].[dbo].[<source_table_1>] AS CO;
+'),
+(2, '<ViewName2>', N'
+    CREATE OR ALTER VIEW <custom_schema>.<ViewName2> AS
+    SELECT CO.<column_1>, CO.<column_2>, CO.<column_3>, CO.<column_4>
+    FROM [<Lakehouse_Name>].[dbo].[<source_table_2>] AS CO;
+');
+-- ... (truncated for brevity)
+
+-- 3. Execute Loop
+DECLARE @Script NVARCHAR(MAX);
+DECLARE @MaxID INT = (SELECT MAX(ID) FROM #ViewScripts);
+
+WHILE @MaxID > 0
+BEGIN
+    SELECT @Script = Script FROM #ViewScripts WHERE ID = @MaxID;
+    EXEC sp_executesql @Script;
+    SET @MaxID = @MaxID - 1;
+END
+
+DROP TABLE #ViewScripts;
+```
+
+---
+
+## Results & Impact
+
+By automating the Shortcut creation, we achieved a functional Lakehouse in hours, not months.
+
+*   **Zero Data Movement**: 50TB+ of data remained in ADLS Gen2.
+*   **Instant Availability**: Tables appeared in the SQL Endpoint immediately after the script ran.
+*   **Power BI Performance**: Direct Lake mode reduced report latency by 40% compared to Serverless SQL.
+*   **Cost Reduction**: Eliminated the per-TB cost of Serverless SQL scans for routine reporting, leveraging Fabric capacity instead.
+
+This pattern demonstrates the power of metadata-driven migration. Ideally, your data gravity should not prevent you from adopting modern compute engines.

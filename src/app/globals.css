@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+}
+
+:root {
+  --background: #050505;
+  /* Deepest Black */
+  --foreground: #FAFAFA;
+  /* Off-white text */
+  --muted: #1A1A1A;
+  --muted-foreground: #888888;
+  --card: #0A0A0A;
+  --card-foreground: #FAFAFA;
+  --border: #333333;
+  --input: #333333;
+  --primary: #FAFAFA;
+  --primary-foreground: #000000;
+  --radius: 0px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #050505;
+    --foreground: #FAFAFA;
+    --muted: #1A1A1A;
+    --muted-foreground: #888888;
+    --card: #0A0A0A;
+    --card-foreground: #FAFAFA;
+    --border: #333333;
+    --input: #333333;
+    --primary: #FAFAFA;
+    --primary-foreground: #000000;
+  }
+}
+
+/* Studio Quality Typography */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  /* Tighter body */
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-serif), serif;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  /* Very tight headings */
+}
+
+/* Utilities */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Cyber Grid Background */
+.bg-cyber-grid {
+  background-size: 50px 50px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  animation: grid-move 20s linear infinite;
+}
+
+@keyframes grid-move {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(50px);
+  }
+}
+
+/* Technical Font Utilities */
+.font-technical {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+h5,
+h6 {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: #171717;
+  border: 1px solid #262626;
+  color: #fafafa;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+:not(pre)>code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  color: var(--primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :not(pre)>code {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #60a5fa;
+  }
+}
+
+/* Utilities for MDX/Prose */
+.prose {
+  max-width: 65ch;
+  line-height: 1.75;
+}
+
+.prose p {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+}
+
+.prose h2 {
+  font-size: 1.5rem;
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.625em;
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+}
+
+.prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

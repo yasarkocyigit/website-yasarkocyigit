@@ -1,0 +1,114 @@
+---
+title: "ADF to Fabric Migration"
+description: "Migrating enterprise-scale Azure Data Factory pipelines to Microsoft Fabric Data Factory. A step-by-step guide using the Microsoft.FabricPipelineUpgrade PowerShell module."
+date: "2025-12-05"
+tags: ["Fabric", "Data Factory", "Migration", "PowerShell"]
+---
+
+## The Migration Challenge
+
+As we transitioned our data estate towards **Microsoft Fabric**, we faced a critical hurdle: migrating hundreds of existing ETL assets from **Azure Data Factory (ADF)**. Manually recreating these pipelines, datasets, and linked services would have been an inefficient use of resources and prone to human error.
+
+Our strategy focused on automation. We leveraged the **Microsoft.FabricPipelineUpgrade** PowerShell module to execute a controlled "lift and shift" operation, ensuring business continuity while modernizing our infrastructure.
+
+---
+
+## Technical Considerations & Limitations
+
+Early in the planning phase, we identified specific constraints within the migration tooling. Understanding these limitations allowed us to refactor incompatible logic *before* executing the migration.
+
+### Supported Functionality
+We confirmed that the tool natively supported our core assets:
+*   **Datasets**: Azure Blob Storage, ADLS Gen2, and Azure SQL Database.
+*   **Activities**: `Copy Activity`, `Web`, `ForEach`, `If Condition`, `Lookup`, and `Execute Pipeline` (which converts efficiently to `InvokePipeline`).
+
+### ⚠️ Critical Constraints We Managed
+*   **Global Parameters**: Since Fabric pipelines do not yet support Global Parameters, we refactored this logic into SQL configuration tables and variable groups.
+*   **Dynamic Web URLs**: We found that dynamic expressions in Web Activity URLs were not supported, requiring us to hard-code specific endpoints or rethink the parameterization strategy.
+*   **Custom Activities**: Any legacy .NET custom activities had to be excluded from the automated scope.
+
+---
+
+## Our Implementation Workflow
+
+We treated the migration as a software engineering project, using the `Microsoft.FabricPipelineUpgrade` module as our bridge between the Azure Resource Manager (ARM) definitions and Fabric's item ecosystem.
+
+### Step 1: Preparing the Environment
+
+We standardized our execution environment on **PowerShell 7.4.2**, as the module relies on modern .NET Core features.
+
+```powershell
+# Our bootstrapping script:
+Install-Module -Name Microsoft.FabricPipelineUpgrade -Repository PSGallery -Force -AllowClobber
+Import-Module Microsoft.FabricPipelineUpgrade
+```
+
+### Step 2: Authentication Strategy
+
+To perform the migration, we established a session with dual context: one identity authorized to read the legacy ADF resources (Azure Management Plane) and the same identity authorized to write to the new Fabric Workspace (Fabric Data Plane).
+
+```powershell
+# 1. Authenticate to Azure
+Connect-AzAccount -SubscriptionId "<subscription_id>"
+
+# 2. Acquire Read Token for ADF
+$adfToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com/").Token
+
+# 3. Acquire Write Token for Fabric
+$fabricToken = (Get-AzAccessToken -ResourceUrl "https://analysis.windows.net/powerbi/api").Token
+```
+
+### Step 3: Mapping Connectivity (`Resolutions.json`)
+
+The most complex part of our migration was re-mapping connectivity. ADF uses "Linked Services" (often containing connection strings), whereas Fabric relies on abstracted "Connections".
+
+We pre-created the necessary connections in the Fabric Portal and built a `Resolutions.json` file. This file served as a translation map, instructing the engine which Fabric Connection ID to use for each legacy ADF Linked Service.
+
+**Our Mapping Strategy:**
+```json
+[
+  {
+    "type": "LinkedServiceToConnectionId",
+    "key": "LS_AzureBlob_Landing",
+    "value": "<fabric_connection_guid_1>" 
+  },
+  {
+    "type": "LinkedServiceToConnectionId",
+    "key": "LS_AzureSql_DW",
+    "value": "<fabric_connection_guid_2>"
+  }
+]
+```
+
+### Step 4: Executing the Migration Pipeline
+
+With our environment prepared and mappings defined, we executed the migration. We chained the commands to read the ADF definition, convert it to the Fabric payload structure, apply our resolution map, and deploy it to the target workspace.
+
+```powershell
+# Configuration
+$subscriptionId = "<subscription_id>"
+$resourceGroup = "<adf_resource_group>"
+$factoryName = "<adf_factory_name>"
+$fabricWorkspaceId = "<target_fabric_workspace_id>"
+
+# Execution Pipeline
+Import-AdfFactory `
+    -SubscriptionId $subscriptionId `
+    -ResourceGroupName $resourceGroup `
+    -FactoryName $factoryName `
+    -AdfToken $adfToken `
+| ConvertTo-FabricResources `
+| Import-FabricResolutions -ResolutionsFilename ".\Resolutions.json" `
+| Export-FabricResources `
+    -WorkspaceId $fabricWorkspaceId `
+    -Token $fabricToken
+```
+
+---
+
+## Results & Architecture Shift
+
+By automating this migration, we successfully moved 95% of our pipeline logic without manual intervention, reducing our transition timeline from months to days. The migrated pipelines now serve as the primary orchestration engine for our Lakehouse, triggering Notebooks and Stored Procedures natively within Fabric.
+
+### References
+*   [Official Documentation: Upgrade Azure Data Factory pipelines to Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/data-factory/migrate-pipelines-powershell-upgrade-module-for-azure-data-factory-to-fabric)

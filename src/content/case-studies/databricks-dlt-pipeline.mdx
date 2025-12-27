@@ -1,0 +1,109 @@
+---
+title: "Lakeflow Pipelines"
+description: "The evolution of DLT. Implementing a 10TB+ streaming ecosystem with Databricks Lakeflow, Spark Declarative Pipelines (SDP), and Unity Catalog."
+date: "2025-11-20"
+tags: ["Lakeflow", "Databricks", "Streaming", "Quality"]
+---
+
+## The Declarative Evolution
+
+Data Engineering has shifted. We moved from writing tasks (Airflow) to defining state (DLT). Now, we have **Lakeflow**.
+Lakeflow unifies Ingestion (**Connect**), Transformation (**Pipelines**), and Orchestration (**Jobs**) into a single intelligent platform.
+
+This isn't just a rename; it's a maturity of the **Spark Declarative Pipeline (SDP)** model.
+
+<ArchitectureDiagramDLT />
+
+---
+
+### Step 1: Lakeflow Connect (Ingestion)
+
+Gone are the days of manual Auto Loader configuration. **Lakeflow Connect** provides managed connectors for Databases (Postgres, SQL Server) and SaaS apps (Salesforce) that dump directly into our Bronze layer.
+
+For cloud storage, we still use the underlying Auto Loader technology, but simpler:
+
+```python
+import dlt as dp # Lakeflow SDP (formerly DLT)
+from pyspark.sql.functions import *
+
+@dp.table(
+    comment="Raw events via Lakeflow Connect",
+    table_properties={"quality": "bronze"}
+)
+def kafka_events_bronze():
+    return (
+        spark.readStream.format("cloud_files")
+        .option("cloudFiles.format", "json")
+        .option("cloudFiles.inferColumnTypes", "true")
+        .load("/mnt/lakeflow/landing/*")
+    )
+```
+
+The system automatically handles **CDC (Change Data Capture)** if we are connected to a transactional database source.
+
+---
+
+### Step 2: Quality as Code (Expectations)
+
+In Lakeflow, quality is a first-class citizen of the DAG. We use **Expectations** to enforce contracts at runtime.
+Lakeflow Pipelines monitors these expectations and populates the **Data Quality Dashboard** automatically.
+
+```python
+@dp.table(
+    comment="Cleaned user events with valid timestamps",
+    table_properties={"quality": "silver"}
+)
+@dp.expect_or_drop("valid_timestamp", "event_ts IS NOT NULL")
+@dp.expect("positive_value", "transaction_amount > 0") 
+def user_events_silver():
+    return (
+        dp.read("kafka_events_bronze")
+        .select(
+            col("user_id"),
+            col("event_ts").cast("timestamp"),
+            col("transaction_amount")
+        )
+    )
+```
+
+If data violates the `expect_or_drop` contract, it is routed to a quarantine table (if configured) or simply dropped from the stream, ensuring the Silver layer remains pristine.
+
+---
+
+### Step 3: Materialized Views (Gold)
+
+In the Lakeflow paradigm, we distinguish between `Streaming Tables` (infinite append) and `Materialized Views` (stateful aggregations).
+
+For our Gold layer, we use Materialized Views because we want the "current state" of the business metrics, incrementally updated.
+
+```python
+@dp.table # or @dp.materialized_view
+def revenue_hourly_gold():
+    return (
+        dp.read("user_events_silver")
+        .groupBy(
+            window("event_ts", "1 hour"),
+            "device_type"
+        )
+        .agg(sum("transaction_amount").alias("revenue"))
+    )
+```
+
+Lakeflow manages the recompute logic. If late data arrives, it updates the view automatically.
+
+---
+
+### Step 4: Unified Governance
+
+Lakeflow is built on **Unity Catalog**.
+This means we do not manage permissions in the pipeline code. We grant access to the *Catalog*, and the pipeline inherits it.
+
+*   **Lineage**: Fully automated from Source -> Bronze -> Report.
+*   **Discovery**: Analysts can search for "Revenue" and find the Gold table immediately.
+
+---
+
+## The Verdict
+
+Adopting **Lakeflow Declarative Pipelines** reduced our operational overhead by **70%**.
+We no longer debug Airflow sensors. We define the *What*, and Lakeflow handles the *When* and *How*.

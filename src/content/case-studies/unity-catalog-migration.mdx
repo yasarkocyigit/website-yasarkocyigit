@@ -1,0 +1,132 @@
+---
+title: "Unity Catalog Migration"
+description: "A battle-hardened runbook for migrating 1 PB+ of data from Hive Metastore to Databricks Unity Catalog. Step-by-step technical guide, UCX tooling, and pitfall avoidance."
+date: "2025-10-15"
+tags: ["Governance", "Security", "Databricks", "Migration"]
+---
+
+## The Migration Runbook
+
+Migrating to Unity Catalog (UC) is an infrastructure overhaul. This guide documents the exact technical steps we executed to migrate a 1PB+ Data Lakehouse with zero downtime.
+
+<ArchitectureDiagramUnityMigration />
+
+---
+
+## Phase 1: Assessment & Identity (The Foundation)
+
+Before moving a single byte of data, we must secure the Identity Plane. A common failure mode is attempting to migrate data before groups are effectively mapped.
+
+### 1.1 The UCX Assessment
+We utilized the **UCX (Unity Catalog Migration Toolkit)** from Databricks Labs. This is not just a script; it's a workflow that installs into your workspace.
+
+```bash
+# Install UCX via Databricks CLI
+databricks labs install ucx
+```
+
+**What it does:**
+*   Scans `hive_metastore` for all Tables, Views, and Permissions.
+*   Identifies "Workspace Local Groups" (which are incompatible with UC).
+*   Generates a Dashboard showing "Migration Readiness".
+
+### 1.2 Identity Federation (SCIM)
+> [!IMPORTANT]
+> **Unity Catalog requires Account-Level Identities.** Workspace-local groups will not work for Grants.
+
+1.  **Disable Workspace SCIM**: Stop syncing AD groups directly to the Workspace.
+2.  **Enable Account SCIM**: Sync Entra ID (Azure AD) groups to the Databricks Account Console.
+3.  **Group Migration**: We used a script to map legacy `workspace_group_finance` to account-level `finance_analyts`.
+
+---
+
+## Phase 2: The Data & Governance Layer
+
+Once identities are in place, we establish the storage perimeter.
+
+### 2.1 Storage Perimeter (External Locations)
+Legacy mounts (`/mnt/sales`) are replaced by **External Locations**.
+
+> [!CAUTION]
+> **The Overlapping Path Trap**: You cannot create an External Location on a path that is inside another External Location.
+> *   Current: `s3://bucket/` (as Root)
+> *   Goal: `s3://bucket/finance` (Protected)
+> *   **Fix**: You must unmount/remove the Root location before defining granular child locations.
+
+```sql
+-- Create the Credential first
+CREATE STORAGE CREDENTIAL `aws_key`
+USING 'arn:aws:iam::123:role/databricks_access';
+
+-- Define the governed location
+CREATE EXTERNAL LOCATION `finance_loc`
+URL 's3://my-datalake/finance'
+WITH STORAGE CREDENTIAL `aws_key`;
+
+-- Grant CREATE TABLE capability to Data Engineers only
+GRANT CREATE TABLE ON EXTERNAL LOCATION `finance_loc` TO `data_engineers`;
+```
+
+---
+
+## Phase 3: Execution (The Migration)
+
+We run a hybrid migration strategy: **SYNC** for External Tables (90% of data) and **DEEP CLONE** for Managed Tables (10% of data).
+
+### 3.1 Strategy A: SYNC (For External Tables)
+Used for data already in S3/ADLS. This is metadata-only and takes seconds per table.
+
+```sql
+-- 1. Dry Run to verify
+SYNC TABLE hive_metastore.sales.transactions 
+FROM hive_metastore.sales.transactions
+DRY RUN;
+
+-- 2. Execute Sync (Idempotent)
+SYNC TABLE hive_metastore.sales.transactions 
+FROM hive_metastore.sales.transactions;
+```
+
+> [!TIP]
+> **Why SYNC vs Upgrade Wizard?**
+> The `SYNC` command is idempotent. You can run it hourly during the transition period to keep the UC table distinct but up-to-date with the HMS table.
+
+### 3.2 Strategy B: DEEP CLONE (For Managed Tables)
+Legacy managed tables live in the root DBFS (`dbfs:/user/hive...`). Unity Catalog **cannot** govern DBFS. We must physically copy this data.
+
+```sql
+-- Creates a fully governed copy in the UC Managed Volume
+CREATE TABLE main.finance.invoices
+DEEP CLONE hive_metastore.finance.invoices;
+```
+
+### 3.3 Strategy C: Hive Federation (The Bridge)
+For tables we couldn't migrate immediately (e.g., legacy Spark jobs), we used Federation to query them via UC Compute.
+
+```sql
+CREATE CATALOG hive_legacy 
+USING CONNECTION hive_metastore_conn;
+-- Now accessible as: select * from hive_legacy.default.my_table
+```
+
+---
+
+## Phase 4: Permission Grants
+
+The final step is translating ACLs to SQL Grants. We automated this using a Python script that iterates the `UCX` assessment output.
+
+```python
+# Pseudo-code for Permission Migration
+for table in tables:
+    legacy_grants = get_hms_perms(table)
+    for grant in legacy_grants:
+        # Convert "Write" to "MODIFY"
+        uc_privilege = map_privilege(grant.type) 
+        spark.sql(f"GRANT {uc_privilege} ON TABLE main.{table.schema}.{table.name} TO `{grant.principal}`")
+```
+
+## Critical Pitfalls
+
+1.  **Single User Cluster Limitations**: In standard "Single User" access mode, Dynamic Views (Row Level Security) may not function as expected. **Always use Shared Access Mode** for BI clusters.
+2.  **Views are not migrated**: `SYNC` does not support Views. You must "Show Create View" in HMS and re-run the DDL in UC.
+3.  **One Metastore Rule**: You cannot have different Metastores for Dev and Prod in the same region. You must use `dev_catalog` and `prod_catalog` within the same Metastore.

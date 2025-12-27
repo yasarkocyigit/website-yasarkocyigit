@@ -1,0 +1,26 @@
+---
+title: "The Evolution of Data Pipelines: From ETL to EtLT"
+description: "How modern data stacks are shifting towards transformation within the warehouse."
+date: "2024-09-10"
+tags: ["Data Engineering", "Architecture", "dbt"]
+published: true
+---
+
+# The Evolution of Data Pipelines
+
+Data engineering has shifted rapidly. The traditional ETL (Extract, Transform, Load) model is being replaced by ELT (Extract, Load, Transform).
+
+## Why the Shift?
+
+Compute power in modern data warehouses (Snowflake, BigQuery) has become cheap and elastic. It makes sense to load raw data first and transform it in place using SQL.
+
+> "The data warehouse is the new application server."
+
+### Benefits of ELT
+
+- **Agility**: Analysts can create transformations without waiting for engineers to update the pipeline.
+- **Visibility**: Lineage tools like dbt make transformations transparent.
+
+## Looking Ahead
+
+Streaming pipelines are the next frontier, blurring the line between batch and real-time.
