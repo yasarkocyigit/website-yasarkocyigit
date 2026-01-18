@@ -4,6 +4,7 @@ import ArchitectureDiagramDetailed from "@/components/architecture-diagram-detai
 import ArchitectureDiagramDLT from "@/components/architecture-diagram-dlt"
 import ArchitectureDiagramUnityMigration from "@/components/architecture-diagram-unity-migration"
 import ArchitectureDiagramAgent from "@/components/architecture-diagram-agent"
+import ArchitectureDiagramMetadataFabric from "@/components/architecture-diagram-metadata-fabric"
 import { McpAgentDemo } from "@/components/mcp-agent-demo"
 import { MDXRemote } from "next-mdx-remote/rsc"
 
@@ -188,6 +189,22 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
                                                             </span>
                                                         </div>
                                                         <ArchitectureDiagramAgent {...props} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ),
+                                        ArchitectureDiagramMetadataFabric: (props: any) => (
+                                            <div className="my-32 not-prose relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw] w-screen">
+                                                <div className="max-w-[100rem] mx-auto relative px-6 md:px-12">
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 blur-3xl opacity-20" />
+                                                    <div className="bg-neutral-950 border-y border-white/10 p-0 md:p-12 overflow-hidden relative group shadow-2xl">
+                                                        <div className="absolute top-6 right-8 z-20 flex items-center gap-2">
+                                                            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
+                                                            <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest hidden md:block">
+                                                                Fabric Metadata
+                                                            </span>
+                                                        </div>
+                                                        <ArchitectureDiagramMetadataFabric {...props} />
                                                     </div>
                                                 </div>
                                             </div>

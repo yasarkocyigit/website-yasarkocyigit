@@ -29,6 +29,15 @@ export const projects: Project[] = [
         year: "2025"
     },
     {
+        title: "Metadata Driven Fabric",
+        description: "Migrating ADF pipelines to Fabric using a Metadata Driven Framework. Features schema evolution, lakehouse shortcuts, and dynamic notebooks.",
+        tags: ["Fabric", "Migration", "Architecture", "Spark"],
+        link: "/case-studies/metadata-driven-fabric",
+        status: "Completed",
+        highlight: true,
+        year: "2025"
+    },
+    {
         title: "Metadata Driven Framework",
         description: "Orchestrating 500+ tables via ADF & Databricks using a single dynamic pipeline. Features Unity Catalog governance and Control Table logic.",
         tags: ["Azure Data Factory", "Databricks", "Architecture"],
