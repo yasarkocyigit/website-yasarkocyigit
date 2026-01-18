@@ -1,0 +1,64 @@
+:root {
+  --vig-soft: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0) 42%,
+    rgba(0, 0, 0, 0.45) 60%,
+    rgba(0, 0, 0, 0.8) 84%,
+    #000 100%
+  );
+  --vig-medium: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0) 35%,
+    rgba(0, 0, 0, 0.6) 58%,
+    rgba(0, 0, 0, 0.92) 82%,
+    #000 100%
+  );
+  --vig-hard: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.1) 28%,
+    rgba(0, 0, 0, 0.75) 54%,
+    rgba(0, 0, 0, 0.97) 80%,
+    #000 100%
+  );
+  --vignette: var(--vig-medium);
+}
+
+.dark {
+  --vig-soft: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0) 46%,
+    rgba(0, 0, 0, 0.4) 62%,
+    rgba(0, 0, 0, 0.78) 86%,
+    #000 100%
+  );
+  --vig-medium: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0) 42%,
+    rgba(0, 0, 0, 0.55) 60%,
+    rgba(0, 0, 0, 0.88) 84%,
+    #000 100%
+  );
+  --vig-hard: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.06) 30%,
+    rgba(0, 0, 0, 0.7) 56%,
+    rgba(0, 0, 0, 0.96) 86%,
+    #000 100%
+  );
+}
+
+.portrait-vignette {
+  background-image: var(--vignette);
+}
+
+.portrait-noise {
+  background-image: url("/noise.png");
+  mix-blend-mode: soft-light;
+  opacity: 0.12;
+}

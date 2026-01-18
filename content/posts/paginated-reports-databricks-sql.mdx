@@ -1,0 +1,294 @@
+---
+title: "Connecting Paginated Reports and SSRS to Databricks SQL Warehouse"
+date: 2025-06-08
+index: 1
+summary: "Connect SSRS and Power BI Paginated Reports to Databricks SQL Warehouse with ODBC drivers, DSN setup, and multi-value parameters."
+tags:
+  - Power BI
+  - Paginated Reports
+  - Databricks
+  - SQL Warehouse
+draft: false
+---
+## How to Connect Paginated Reports/SSRS to Databricks SQL Warehouse-Including Multi-Value Parameter Support
+
+Introduction
+
+While Power BI offers a highly advanced, interactive, and visually rich reporting experience, there are still important scenarios where organizations need to leverage Paginated Reports (either traditional SSRS or .rdl files hosted on the Power BI Service). One notable example is SSRS’s data-driven subscription capability, which enables fully automated report distribution via email with dynamic attachments - a feature that is not natively available in standard Power BI reports.
+
+This technical guide provides a comprehensive, step-by-step walkthrough for integrating Paginated Reports with Databricks SQL Warehouse at an enterprise scale. From initial environment setup, ODBC driver and DSN configuration, to advanced support for multi-valued parameters, every stage is covered in detail with practical examples and production-ready recommendations. The goal is to deliver a clear, hands-on reference for data engineers and BI developers seeking to establish or optimize this integration in real-world environments.
+
+## Prerequisites & Required Components
+
+Before you begin, ensure you have:
+
+- Databricks SQL Warehouse Cluster: Active endpoint with necessary access.
+- Paginated Reports authoring tool: Power BI Report Builder (for .rdl files) or SQL Server Data Tools (SSDT) for SSRS.
+- On-premises SSRS server *or* a Power BI Gateway (for Power BI Service-hosted .rdl).
+- ODBC Simba Spark Driver (latest version).
+- Databricks personal access token and workspace SQL warehouse connection details.
+- Admin rights on the server where you will install/configure ODBC drivers.
+
+## Step 1: Download and Install Simba Spark ODBC Driver
+
+1. Go to Databricks > SQL Warehouses > Connection Details > Download ODBC driver.Alternatively, [download directly](https://databricks.com/spark/odbc-driver-download).
+2. Run the installer on your SSRS server or the Gateway machine.
+3. Restart the server/service if prompted.
+
+## Step 3: Create an ODBC DSN (Data Source Name)
+
+Where?
+
+- On-prem SSRS: On the SSRS server.
+- Power BI Service (hosted .rdl): On the Data Gateway server.
+
+## Steps:
+
+1. Open ODBC Data Source Administrator (`odbcad32.exe`).
+2. Go to System DSN > Add.
+3. Select Simba Spark ODBC Driver.
+4. Fill in:
+
+- Host: `adb-<workspace>.azuredatabricks.net`
+- Port: `443`
+- HTTP Path: Find in Databricks SQL Warehouse connection details.
+- Authentication: *Personal Access Token* (recommended)
+- Token: Your Databricks token.
+- (Optional) Default Catalog/Schema: For default database/schema.
+
+1. Test Connection to confirm.
+2. Name the DSN (e.g., `DatabricksProd`).
+
+![](https://miro.medium.com/v2/resize:fit:1400/1*206hVPodaSogd57v4fyZpw.png)
+
+![](https://miro.medium.com/v2/resize:fit:1400/1*0JpNYE9ZXWjOjq0Qph7Yew.png)
+
+![](https://miro.medium.com/v2/resize:fit:1400/1*Vp8n5WGA0YFXZ1o7J3vkKA.png)
+
+![](https://miro.medium.com/v2/resize:fit:1400/1*_XEzAWg5NEFdkPazwOuibw.png)
+
+## Step 3: ODBC Driver Registry Setting - Enable UseNativeQuery
+
+Why?
+Enabling `UseNativeQuery=1` is essential for supporting advanced SQL syntax and parameter passing (especially needed for multi-value parameters in Databricks).
+
+How to set it:
+
+1. Open Registry Editor (`regedit.exe`).
+2. Navigate to:
+`Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Simba\Spark ODBC Driver`
+3. Add or update a `String Value` named `UseNativeQuery` with value `1`.
+
+*Tip: If using a 32-bit app on 64-bit OS, check under `WOW6432Node`.*
+
+## Step 4: Build the SSRS / Paginated Reports Connection String
+
+- In your report authoring tool, choose ODBC as the connection type.
+- Use this format:
+- `DSN=DatabricksProd`
+- Or, for full connection string (no DSN):
+- `Driver={Simba Spark ODBC Driver};Host=adb-<workspace>.azuredatabricks.net;Port=443;HTTPPath=/sql/1.0/warehouses/<warehouse-id>;SparkServerType=3;AuthMech=3;UID=token;PWD=<your-token>;`
+
+*Note: DSN approach is simpler for centralized management.*
+
+## Step 5: Connect Report to Databricks and Test
+
+1. In Power BI Report Builder or SSDT, create a new Data Source.
+2. Select ODBC, paste the DSN or connection string.
+3. Create a Data Set and write a simple query (e.g., `SELECT 1` or from your target table).
+4. Run Preview to confirm connectivity.
+
+## Step 6: Implement Multi-Valued Parameter Support
+
+## The Challenge
+
+Paginated Reports support multi-value parameters (users can pick multiple items). However, Databricks (and the Simba ODBC driver) expects a single string value, not an array, when passing parameters.
+
+Solution:
+Pass the comma-separated string to Databricks, then split/explode into rows within your SQL using Databricks SQL Warehouse functions.
+
+Reference:
+Adapted from [Kyle Hale’s excellent article](https://medium.com/@kyle.hale/passing-multi-valued-parameters-from-power-bi-paginated-reports-to-databricks-sql-f91168fd131b).
+
+## Example Scenario
+
+Suppose your report needs to filter on multiple `Region` values.
+
+- 1. Define a multi-value parameter in your report (e.g., `@RegionList`)
+- Parameter settings:
+- Allow multiple values
+- Data type: Text
+- 2. In your Data Set SQL, handle the parameter as follows:
+
+```less
+WITH param_table AS (
+  SELECT explode(split(@RegionList, ',')) AS region
+)
+SELECT *
+FROM sales
+WHERE region IN (SELECT region FROM param_table)
+```
+
+Explanation:
+
+- `@RegionList` receives values like `"East,West,North"`.
+- `split(@RegionList, ',')` turns it into an array.
+- `explode` creates a row per value for use in `IN` clauses.
+
+Full Example with Parameterized SQL:
+
+```sql
+WITH selected_regions AS (
+  SELECT explode(split(@RegionList, ',')) AS Region
+)
+SELECT s.*
+FROM sales s
+INNER JOIN selected_regions r ON s.Region = r.Region
+```
+
+- 3. In SSRS / Report Builder:
+- When users pick multiple regions, the tool will pass `"East,West,North"` as a single string to Databricks.
+- 4. For Numeric Multi-Value Parameters
+- Example: IDs (cast to `BIGINT` or `DECIMAL` as needed):
+
+```less
+WITH selected_ids AS (
+  SELECT CAST(explode(split(@IdList, ',')) AS BIGINT) AS id
+)
+SELECT *
+FROM mytable
+WHERE id IN (SELECT id FROM selected_ids)
+```
+
+- 4. Example Query Conversion
+- T-SQL Version:
+
+```sql
+
+          SELECT TOP 100
+              soh.SalesOrderID,
+              soh.SalesOrderNumber,
+              soh.OrderDate,
+              soh.DueDate,
+              soh.ShipDate,
+              soh.Status,
+              soh.OnlineOrderFlag,
+              soh.PurchaseOrderNumber,
+              soh.AccountNumber,
+              soh.CustomerID,
+              soh.SalesPersonID,
+              soh.TerritoryID,
+              st.Name AS TerritoryName,
+              st.CountryRegionCode,
+              soh.SubTotal,
+              soh.TaxAmt,
+              soh.Freight,
+              soh.TotalDue,
+              soh.Comment,
+              soh.ModifiedDate
+          FROM Sales.SalesOrderHeader soh
+          LEFT JOIN Sales.SalesTerritory st ON soh.TerritoryID = st.TerritoryID
+          WHERE soh.OrderDate BETWEEN @StartDate AND @EndDate
+            AND (CHARINDEX(',' + CAST(soh.SalesOrderID AS VARCHAR(20)) + ',', ',' + @OrderIDs + ',') > 0 OR @OrderIDs IS NULL)
+          ORDER BY soh.OrderDate DESC
+```
+
+- Databricks Version:
+
+```sql
+WITH order_ids_param AS (
+    SELECT explode(split(?, ',')) AS SalesOrderID --Multi Value Parameter
+),
+date_params AS (
+    SELECT
+        ? AS StartDate, --Single Value Parameter
+        ? AS EndDate --Single Value Parameter
+)
+SELECT
+    soh.SalesOrderID,
+    soh.SalesOrderNumber,
+    soh.OrderDate,
+    soh.DueDate,
+    soh.ShipDate,
+    soh.Status,
+    soh.OnlineOrderFlag,
+    soh.PurchaseOrderNumber,
+    soh.AccountNumber,
+    soh.CustomerID,
+    soh.SalesPersonID,
+    soh.TerritoryID,
+    st.Name AS TerritoryName,
+    st.CountryRegionCode,
+    soh.SubTotal,
+    soh.TaxAmt,
+    soh.Freight,
+    soh.TotalDue,
+    soh.Comment,
+    soh.ModifiedDate
+FROM main.silver_prod.sales_salesorderheader soh
+LEFT JOIN main.silver_prod.sales_salesterritory st
+    ON soh.TerritoryID = st.TerritoryID
+CROSS JOIN date_params dp
+LEFT JOIN order_ids_param oip
+    ON soh.SalesOrderID = CAST(oip.SalesOrderID AS INT)
+WHERE soh.OrderDate BETWEEN dp.StartDate AND dp.EndDate
+    AND (
+        NOT EXISTS (SELECT 1 FROM order_ids_param)
+        OR oip.SalesOrderID IS NOT NULL
+    )
+ORDER BY soh.OrderDate DESC
+LIMIT 100
+```
+
+- Report Parameter:
+
+*The order of the parameters must match the order of the parameters in the query.*
+
+![](https://miro.medium.com/v2/resize:fit:1400/1*OVflwJBGMyY5G0lMS_cl4A.png)
+
+![](https://miro.medium.com/v2/resize:fit:1400/1*tHwVI_hUM6JYC50QOF-vLg.png)
+
+## Step 7: Troubleshooting & Best Practices
+
+Driver Error / Connection Failure
+*Cause:* Wrong DSN settings or missing registry edit.
+*Solution:* Double-check your DSN configuration. Ensure `UseNativeQuery=1` is set correctly in the registry. Test the connection using ODBC Data Source Administrator.
+
+Multi-value parameter only returns first value
+*Cause:* The SQL does not split the input parameter.
+*Solution:* Use the `split` and `explode` functions in your SQL query, as described in the examples above.
+
+Data refresh errors on Power BI Service
+*Cause:* Gateway configuration or driver mismatch.
+*Solution:* Make sure the correct DSN and driver version are installed on the gateway server. Restart the gateway service after making any changes to the driver or DSN settings.
+
+Timeouts on large queries
+*Cause:* Poor query design or missing predicate pushdown.
+*Solution:* Use filters inside CTEs, avoid returning excessive rows, and regularly monitor your Databricks SQL Warehouse performance for potential bottlenecks.
+
+## Common Gotchas
+
+- Always restart the service (SSRS or Power BI Gateway) after driver installation or registry changes.
+- Parameter names in your SQL must exactly match those defined in your report.
+- Don’t use spaces or special characters in parameter names.
+- ODBC errors may appear in SSRS logs - check event logs or gateway logs for root cause.
+
+## Recap: Key Steps & Summary
+
+1. Install Simba Spark ODBC driver on your report server/gateway.
+2. Edit registry to enable `UseNativeQuery=1`.
+3. Create DSN with Databricks connection info.
+4. Author your report: use ODBC source pointing to your DSN.
+5. Pass multi-value parameters as comma-separated strings, and handle with `split` and `explode` in Databricks SQL.
+6. Test each step and monitor logs for issues.
+
+## References & Further Reading
+
+- [Kyle Hale: Passing Multi-Valued Parameters from Power BI Paginated Reports to Databricks SQL](https://medium.com/@kyle.hale/passing-multi-valued-parameters-from-power-bi-paginated-reports-to-databricks-sql-f91168fd131b)
+- [Databricks ODBC Driver Docs](https://docs.databricks.com/en/integrations/odbc.html)
+
+## Conclusion
+
+With these steps, you can robustly connect Paginated Reports (SSRS or Power BI .rdl) to Databricks SQL Warehouse, including enterprise-ready support for multi-value parameters. This approach is tried-and-tested for large-scale BI projects, making the most of both Databricks’ power and familiar reporting tools.
+
+Have questions or need more real-world troubleshooting? Drop them in the comments or reach out!

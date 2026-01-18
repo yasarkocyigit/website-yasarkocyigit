@@ -1,0 +1,21 @@
+{
+  "name": "Yasar Kocyigit",
+  "short_name": "YK",
+  "description": "Data engineering insights and notes by Yasar Kocyigit.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f8",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    },
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "64x64"
+    }
+  ]
+}
